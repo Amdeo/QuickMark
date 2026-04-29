@@ -20,7 +20,7 @@ export function PopupApp() {
         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-on-surface hover:bg-surface-container-high"
       >
         <span className="text-on-surface-variant">&#x2305;</span>
-        Search
+        搜索
       </button>
 
       <button
@@ -28,7 +28,7 @@ export function PopupApp() {
         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-on-surface hover:bg-surface-container-high"
       >
         <span className="text-on-surface-variant">&#x29C4;</span>
-        Dashboard
+        书签管理
       </button>
 
       <button
@@ -36,7 +36,7 @@ export function PopupApp() {
         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-on-surface hover:bg-surface-container-high"
       >
         <span className="text-on-surface-variant">&#x25EB;</span>
-        Workspaces
+        工作区
       </button>
 
       <div className="my-1 border-t border-[#1F2430]" />
@@ -46,7 +46,7 @@ export function PopupApp() {
         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
       >
         <span className="text-on-surface-variant">&#x2699;</span>
-        Settings
+        设置
       </button>
     </div>
   );

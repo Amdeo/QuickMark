@@ -27,7 +27,7 @@ export function WorkspaceSelect({ value, onChange }: WorkspaceSelectProps) {
         onChange={handleChange}
         className="w-full appearance-none rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
       >
-        <option value="">No Workspace</option>
+        <option value="">无工作区</option>
         {workspaces.map((ws) => (
           <option key={ws.id} value={ws.id}>
             {ws.name}

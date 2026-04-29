@@ -32,7 +32,7 @@ export function WorkspacesApp() {
   }
 
   async function handleDelete(workspaceId: string) {
-    const confirmed = window.confirm("Delete this workspace? Bookmarks will remain ungrouped.");
+    const confirmed = window.confirm("删除此工作区？关联的书签将变为未分组。");
     if (!confirmed) return;
 
     await workspaceRepo.remove(workspaceId);
@@ -57,27 +57,27 @@ export function WorkspacesApp() {
   return (
     <main className="min-h-screen bg-surface text-on-surface">
       <div className="mx-auto max-w-3xl p-6">
-        <h1 className="text-xl font-semibold">Workspaces</h1>
-        <p className="text-sm text-outline">Organize your bookmarks into groups</p>
+        <h1 className="text-xl font-semibold">工作区</h1>
+        <p className="text-sm text-outline">将书签分组管理</p>
 
         <form onSubmit={handleCreate} className="mt-6 flex items-center gap-2">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="New workspace name..."
+            placeholder="新建工作区名称..."
             className="flex-1 rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary placeholder:text-outline"
           />
           <button
             type="submit"
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary hover:bg-primary-container"
           >
-            Create
+            创建
           </button>
         </form>
 
         <div className="mt-6 space-y-3">
           {workspaces.length === 0 && (
-            <div className="py-4 text-center text-sm text-outline">No workspaces yet</div>
+            <div className="py-4 text-center text-sm text-outline">暂无工作区</div>
           )}
 
           {workspaces.map((ws) => {
@@ -92,7 +92,7 @@ export function WorkspacesApp() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-on-surface">{ws.name}</span>
-                    <span className="text-xs text-outline">{wsBookmarks.length} bookmarks</span>
+                    <span className="text-xs text-outline">{wsBookmarks.length} 个书签</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-outline">{isExpanded ? "▾" : "▸"}</span>
@@ -103,7 +103,7 @@ export function WorkspacesApp() {
                         void handleDelete(ws.id);
                       }}
                       className="rounded p-1 text-sm text-outline hover:bg-surface-container-high hover:text-error"
-                      title="Delete workspace"
+                      title="删除工作区"
                     >
                       🗑
                     </button>
@@ -113,7 +113,7 @@ export function WorkspacesApp() {
                 {isExpanded && (
                   <div className="border-t border-[#1F2430] px-4 py-2">
                     {wsBookmarks.length === 0 ? (
-                      <div className="py-4 text-center text-sm text-outline">No bookmarks in this workspace</div>
+                      <div className="py-4 text-center text-sm text-outline">此工作区暂无书签</div>
                     ) : (
                       wsBookmarks.map((bm) => (
                         <div key={bm.id} className="flex items-center gap-2 py-2">
@@ -125,7 +125,7 @@ export function WorkspacesApp() {
                             )}
                           </div>
                           <span className="flex-1 truncate text-sm text-on-surface">{bm.title}</span>
-                          <span className="text-xs text-outline">{bm.visitCount} visits</span>
+                          <span className="text-xs text-outline">{bm.visitCount} 次访问</span>
                         </div>
                       ))
                     )}

@@ -11,19 +11,14 @@ const SAVE_PANEL_HOST_ID = "quickmark-save-panel-root";
 let root: Root | undefined;
 let savePanelRoot: Root | undefined;
 
-const state = window as Window & { __quickmarkContentLoaded?: boolean };
-
-if (!state.__quickmarkContentLoaded) {
-  state.__quickmarkContentLoaded = true;
-  chrome.runtime.onMessage.addListener((message: { type?: string; tab?: TabSnapshot }) => {
-    if (message.type === "QUICKMARK_TOGGLE") {
-      toggleOverlay();
-    }
-    if (message.type === "QUICKMARK_OPEN_SAVE_PANEL" && message.tab) {
-      openSavePanel(message.tab);
-    }
-  });
-}
+chrome.runtime.onMessage.addListener((message: { type?: string; tab?: TabSnapshot }) => {
+  if (message.type === "QUICKMARK_TOGGLE") {
+    toggleOverlay();
+  }
+  if (message.type === "QUICKMARK_OPEN_SAVE_PANEL" && message.tab) {
+    openSavePanel(message.tab);
+  }
+});
 
 function toggleOverlay(): void {
   const existing = document.getElementById(HOST_ID);

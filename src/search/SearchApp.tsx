@@ -33,12 +33,12 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
 
   const statusText = useMemo(() => {
     if (isLoading) {
-      return "Loading";
+      return "加载中";
     }
     if (!results.length) {
-      return query ? "No results" : "No bookmarks";
+      return query ? "无结果" : "无书签";
     }
-    return query ? "Search Results" : "Recent Bookmarks";
+    return query ? "搜索结果" : "最近书签";
   }, [isLoading, query, results.length]);
 
   async function openSelected(newTab: boolean) {
@@ -102,7 +102,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="h-full flex-1 border-none bg-transparent p-0 text-sm text-on-surface outline-none placeholder:text-outline"
-            placeholder="Search bookmarks... (#tag @workspace)"
+            placeholder="搜索书签... (#标签 @工作区)"
             spellCheck={false}
           />
           <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
@@ -126,23 +126,23 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
 
           {!isLoading && !results.length ? (
             <div className="px-2 py-12 text-center text-sm text-on-surface-variant">
-              {query ? "No matching bookmark found." : "Press Command/Ctrl + Shift + S on any page to save it."}
+              {query ? "未找到匹配的书签。" : "在任意页面按 Command/Ctrl + Shift + S 保存当前网页。"}
             </div>
           ) : null}
         </div>
 
         <footer className="flex flex-none items-center gap-2 border-t border-[#1F2430] bg-surface-container-low px-4 py-2 text-xs text-outline">
-          <span>↑↓ Select</span>
+          <span>↑↓ 选择</span>
           <span>·</span>
-          <span>Enter Open</span>
+          <span>Enter 打开</span>
           <span>·</span>
-          <span>{isMac ? "⌘" : "Ctrl"} Enter New Tab</span>
+          <span>{isMac ? "⌘" : "Ctrl"} Enter 新标签页</span>
           <span>·</span>
-          <span>Delete Remove</span>
+          <span>Delete 删除</span>
           {onClose ? (
             <>
               <span>·</span>
-              <span>Esc Close</span>
+              <span>Esc 关闭</span>
             </>
           ) : null}
         </footer>
@@ -191,7 +191,7 @@ function BookmarkRow({
           <span className="h-0.5 w-0.5 flex-none rounded-full bg-outline" />
           <span className="truncate">{compactUrl(item.url)}</span>
           <span className="h-0.5 w-0.5 flex-none rounded-full bg-outline" />
-          <span className="flex-none">{item.visitCount} visits</span>
+          <span className="flex-none">{item.visitCount} 次访问</span>
         </div>
       </div>
     </button>

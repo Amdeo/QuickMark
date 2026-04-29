@@ -44,7 +44,7 @@ export function TagInput({ tags, onChange, placeholder }: TagInputProps) {
             type="button"
             onClick={() => removeTag(index)}
             className="text-on-surface-variant hover:text-on-surface"
-            aria-label={`Remove tag ${tag}`}
+            aria-label={`移除标签 ${tag}`}
           >
             ×
           </button>

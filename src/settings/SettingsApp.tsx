@@ -43,12 +43,12 @@ export function SettingsApp() {
         : await importFromJson(file);
 
       setImportStatus(
-        `Imported ${result.importedBookmarks} bookmarks` +
-          (result.importedWorkspaces > 0 ? `, ${result.importedWorkspaces} workspaces` : "") +
-          (result.skipped > 0 ? `, skipped ${result.skipped} duplicates` : "")
+        `导入 ${result.importedBookmarks} 个书签` +
+          (result.importedWorkspaces > 0 ? `、${result.importedWorkspaces} 个工作区` : "") +
+          (result.skipped > 0 ? `，跳过 ${result.skipped} 个重复项` : "")
       );
     } catch {
-      setImportStatus("Import failed. Check file format.");
+      setImportStatus("导入失败，请检查文件格式。");
     }
 
     event.target.value = "";
@@ -64,10 +64,10 @@ export function SettingsApp() {
 
   return (
     <div className="mx-auto max-w-md p-6">
-      <h1 className="mb-6 text-xl font-semibold text-on-surface">Settings</h1>
+      <h1 className="mb-6 text-xl font-semibold text-on-surface">设置</h1>
 
       <section className="mb-6">
-        <h2 className="mb-3 text-sm font-medium text-on-surface">Save Behavior</h2>
+        <h2 className="mb-3 text-sm font-medium text-on-surface">保存行为</h2>
         <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#1F2430] bg-surface-container p-4">
           <input
             type="checkbox"
@@ -76,29 +76,28 @@ export function SettingsApp() {
             onChange={handleToggle}
           />
           <div>
-            <div className="font-medium text-on-surface">Show save panel on every save</div>
+            <div className="font-medium text-on-surface">每次保存时显示保存面板</div>
             <div className="mt-1 text-xs text-outline">
-              When enabled, pressing the save shortcut opens a panel to edit tags, workspace, and
-              notes. Disable for silent one-click saving.
+              开启后，按保存快捷键会弹出面板以编辑标签、工作区和备注。关闭则一键静默保存。
             </div>
           </div>
         </label>
       </section>
 
       <section className="mb-6">
-        <h2 className="mb-3 text-sm font-medium text-on-surface">Data</h2>
+        <h2 className="mb-3 text-sm font-medium text-on-surface">数据</h2>
         <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="text-sm text-on-surface">Export Bookmarks</div>
-              <div className="text-xs text-outline">Download all bookmarks and workspaces as JSON</div>
+              <div className="text-sm text-on-surface">导出书签</div>
+              <div className="text-xs text-outline">将所有书签和工作区导出为 JSON</div>
             </div>
             <button
               type="button"
               onClick={handleExport}
               className="rounded-lg border border-outline-variant px-3 py-1.5 text-sm text-on-surface hover:bg-surface-container-high"
             >
-              Export
+              导出
             </button>
           </div>
 
@@ -106,15 +105,15 @@ export function SettingsApp() {
 
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="text-sm text-on-surface">Import Bookmarks</div>
-              <div className="text-xs text-outline">Import from QuickMark JSON or browser HTML</div>
+              <div className="text-sm text-on-surface">导入书签</div>
+              <div className="text-xs text-outline">从 QuickMark JSON 或浏览器 HTML 书签文件导入</div>
             </div>
             <button
               type="button"
               onClick={handleImportClick}
               className="rounded-lg border border-outline-variant px-3 py-1.5 text-sm text-on-surface hover:bg-surface-container-high"
             >
-              Import
+              导入
             </button>
           </div>
 
@@ -133,10 +132,10 @@ export function SettingsApp() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-medium text-on-surface">Keyboard Shortcuts</h2>
+        <h2 className="mb-3 text-sm font-medium text-on-surface">键盘快捷键</h2>
         <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
           <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-on-surface">Open Search</span>
+            <span className="text-sm text-on-surface">打开搜索</span>
             <div className="flex items-center gap-1">
               <ShortcutBadge>{isMac ? "⌘" : "Ctrl"}</ShortcutBadge>
               <ShortcutBadge>Shift</ShortcutBadge>
@@ -144,7 +143,7 @@ export function SettingsApp() {
             </div>
           </div>
           <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-on-surface">Save Active Tab</span>
+            <span className="text-sm text-on-surface">保存当前标签页</span>
             <div className="flex items-center gap-1">
               <ShortcutBadge>{isMac ? "⌘" : "Ctrl"}</ShortcutBadge>
               <ShortcutBadge>Shift</ShortcutBadge>
@@ -152,7 +151,7 @@ export function SettingsApp() {
             </div>
           </div>
           <div className="mt-3 text-xs text-outline">
-            To customize shortcuts, visit{" "}
+            自定义快捷键请访问{" "}
             <a
               href="chrome://extensions/shortcuts"
               target="_blank"

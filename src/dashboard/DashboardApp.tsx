@@ -14,10 +14,10 @@ function formatRelativeTime(timestamp: number): string {
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (hours < 24) return `${hours}小时前`;
+  if (days < 7) return `${days}天前`;
   return new Date(timestamp).toLocaleDateString();
 }
 
@@ -117,7 +117,7 @@ export function DashboardApp() {
   }
 
   async function handleRemove(id: string) {
-    if (!confirm("Delete this bookmark?")) {
+    if (!confirm("确定删除此书签？")) {
       return;
     }
     await repository.remove(id);
@@ -138,20 +138,20 @@ export function DashboardApp() {
   return (
     <main className="min-h-screen bg-surface p-6 text-on-surface">
       <div className="mx-auto max-w-5xl">
-        <h1 className="mb-6 text-xl font-semibold">Dashboard</h1>
+        <h1 className="mb-6 text-xl font-semibold">书签管理</h1>
 
         <div className="mb-6 grid grid-cols-3 gap-4">
           <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
             <div className="text-2xl font-semibold text-primary">{stats.total}</div>
-            <div className="mt-1 text-xs text-outline">Total Bookmarks</div>
+            <div className="mt-1 text-xs text-outline">全部书签</div>
           </div>
           <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
             <div className="text-2xl font-semibold text-secondary">{stats.thisWeek}</div>
-            <div className="mt-1 text-xs text-outline">This Week</div>
+            <div className="mt-1 text-xs text-outline">本周新增</div>
           </div>
           <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
             <div className="text-2xl font-semibold text-tertiary">{stats.topVisits}</div>
-            <div className="mt-1 text-xs text-outline">Top Visits</div>
+            <div className="mt-1 text-xs text-outline">最高访问</div>
           </div>
         </div>
 
@@ -161,7 +161,7 @@ export function DashboardApp() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search bookmarks..."
+              placeholder="搜索书签..."
               className="w-full rounded-lg border border-outline-variant bg-surface-container py-2 pl-9 pr-3 text-sm text-on-surface outline-none focus:border-primary placeholder:text-outline"
               spellCheck={false}
             />
@@ -171,7 +171,7 @@ export function DashboardApp() {
             onChange={(e) => setWorkspaceFilter(e.target.value)}
             className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
           >
-            <option value="all">All Workspaces</option>
+            <option value="all">全部工作区</option>
             {workspaces.map((ws) => (
               <option key={ws.id} value={ws.id}>{ws.name}</option>
             ))}
@@ -182,12 +182,12 @@ export function DashboardApp() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-[#1F2430] text-xs text-on-surface-variant">
-                <th className="px-4 py-3 font-medium">Bookmark</th>
-                <th className="px-4 py-3 font-medium">Workspace</th>
-                <th className="px-4 py-3 font-medium">Tags</th>
-                <th className="px-4 py-3 font-medium">Visits</th>
-                <th className="px-4 py-3 font-medium">Last Visited</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
+                <th className="px-4 py-3 font-medium">书签</th>
+                <th className="px-4 py-3 font-medium">工作区</th>
+                <th className="px-4 py-3 font-medium">标签</th>
+                <th className="px-4 py-3 font-medium">访问</th>
+                <th className="px-4 py-3 font-medium">最后访问</th>
+                <th className="px-4 py-3 font-medium">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -241,7 +241,7 @@ export function DashboardApp() {
                         type="button"
                         onClick={() => startEdit(item)}
                         className="text-on-surface-variant transition-colors hover:text-primary"
-                        title="Edit"
+                        title="编辑"
                       >
                         ✎
                       </button>
@@ -249,7 +249,7 @@ export function DashboardApp() {
                         type="button"
                         onClick={() => void handleRemove(item.id)}
                         className="text-on-surface-variant transition-colors hover:text-error"
-                        title="Delete"
+                        title="删除"
                       >
                         🗑
                       </button>
@@ -262,7 +262,7 @@ export function DashboardApp() {
 
           {!isLoading && results.length === 0 && (
             <div className="px-4 py-12 text-center text-sm text-on-surface-variant">
-              {query ? "No matching bookmarks found." : "No bookmarks yet."}
+              {query ? "未找到匹配的书签。" : "暂无书签。"}
             </div>
           )}
         </div>
@@ -281,12 +281,12 @@ export function DashboardApp() {
             onKeyDown={handleEditKeyDown}
           >
             <div className="flex h-14 items-center justify-between border-b border-[#1F2430] px-4">
-              <h2 className="text-sm font-medium text-on-surface">Edit Bookmark</h2>
+              <h2 className="text-sm font-medium text-on-surface">编辑书签</h2>
               <button
                 type="button"
                 onClick={cancelEdit}
                 className="text-on-surface-variant hover:text-on-surface"
-                aria-label="Close"
+                aria-label="关闭"
               >
                 ✕
               </button>
@@ -294,7 +294,7 @@ export function DashboardApp() {
 
             <div className="flex flex-col gap-4 p-4">
               <div>
-                <label className="mb-1 block text-xs text-on-surface-variant">Title</label>
+                <label className="mb-1 block text-xs text-on-surface-variant">标题</label>
                 <input
                   ref={editTitleRef}
                   type="text"
@@ -305,7 +305,7 @@ export function DashboardApp() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs text-on-surface-variant">URL</label>
+                <label className="mb-1 block text-xs text-on-surface-variant">链接</label>
                 <input
                   type="text"
                   value={editUrl}
@@ -315,23 +315,23 @@ export function DashboardApp() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs text-on-surface-variant">Workspace</label>
+                <label className="mb-1 block text-xs text-on-surface-variant">工作区</label>
                 <WorkspaceSelect value={editWorkspaceId} onChange={setEditWorkspaceId} />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs text-on-surface-variant">Tags</label>
+                <label className="mb-1 block text-xs text-on-surface-variant">标签</label>
                 <div className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2">
-                  <TagInput tags={editTags} onChange={setEditTags} placeholder="Add tags..." />
+                  <TagInput tags={editTags} onChange={setEditTags} placeholder="添加标签..." />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs text-on-surface-variant">Notes</label>
+                <label className="mb-1 block text-xs text-on-surface-variant">备注</label>
                 <textarea
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
-                  placeholder="Optional notes..."
+                  placeholder="可选备注..."
                   className="h-20 w-full resize-none rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
                 />
               </div>
@@ -343,7 +343,7 @@ export function DashboardApp() {
                 onClick={cancelEdit}
                 className="rounded-lg border border-outline-variant px-4 py-2 text-sm text-on-surface hover:bg-surface-container-high"
               >
-                Cancel
+                取消
               </button>
               <button
                 type="button"
@@ -351,7 +351,7 @@ export function DashboardApp() {
                 disabled={editSaving}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary hover:bg-primary-container disabled:opacity-50"
               >
-                {editSaving ? "Saving..." : "Save"}
+                {editSaving ? "保存中..." : "保存"}
               </button>
             </div>
           </div>

@@ -56,12 +56,12 @@ export function SavePanel({ tab, onSaved, onCancel }: SavePanelProps) {
       onKeyDown={handleKeyDown}
     >
       <div className="flex h-14 items-center justify-between border-b border-[#1F2430] px-4">
-        <h2 className="text-sm font-medium text-on-surface">Save Bookmark</h2>
+        <h2 className="text-sm font-medium text-on-surface">保存书签</h2>
         <button
           type="button"
           onClick={onCancel}
           className="text-on-surface-variant hover:text-on-surface"
-          aria-label="Close"
+          aria-label="关闭"
         >
           ✕
         </button>
@@ -70,7 +70,7 @@ export function SavePanel({ tab, onSaved, onCancel }: SavePanelProps) {
       <div className="flex flex-col gap-4 p-4">
         <div>
           <label className="mb-1 block text-xs text-on-surface-variant">
-            Title
+            标题
           </label>
           <input
             ref={titleRef}
@@ -83,28 +83,28 @@ export function SavePanel({ tab, onSaved, onCancel }: SavePanelProps) {
 
         <div>
           <label className="mb-1 block text-xs text-on-surface-variant">
-            Workspace
+            工作区
           </label>
           <WorkspaceSelect value={workspaceId} onChange={setWorkspaceId} />
         </div>
 
         <div>
           <label className="mb-1 block text-xs text-on-surface-variant">
-            Tags
+            标签
           </label>
           <div className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2">
-            <TagInput tags={tags} onChange={setTags} placeholder="Add tags..." />
+            <TagInput tags={tags} onChange={setTags} placeholder="添加标签..." />
           </div>
         </div>
 
         <div>
           <label className="mb-1 block text-xs text-on-surface-variant">
-            Notes
+            备注
           </label>
           <textarea
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
-            placeholder="Optional notes..."
+            placeholder="可选备注..."
             className="h-20 w-full resize-none rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
           />
         </div>
@@ -116,7 +116,7 @@ export function SavePanel({ tab, onSaved, onCancel }: SavePanelProps) {
           onClick={onCancel}
           className="rounded-lg border border-outline-variant px-4 py-2 text-sm text-on-surface hover:bg-surface-container-high"
         >
-          Cancel
+          取消
         </button>
         <button
           type="button"
@@ -124,7 +124,7 @@ export function SavePanel({ tab, onSaved, onCancel }: SavePanelProps) {
           disabled={saving}
           className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary hover:bg-primary-container disabled:opacity-50"
         >
-          {saving ? "Saving..." : "Save"}
+          {saving ? "保存中..." : "保存"}
         </button>
       </div>
     </div>
