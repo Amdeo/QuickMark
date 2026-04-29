@@ -85,7 +85,7 @@ export function WorkspacesApp() {
             const isExpanded = expandedId === ws.id;
 
             return (
-              <div key={ws.id} className="rounded-xl border border-[#1F2430] bg-surface-container">
+              <div key={ws.id} className="rounded-xl border border-[outline-variant] bg-surface-container">
                 <div
                   className="flex cursor-pointer items-center justify-between px-4 py-3"
                   onClick={() => toggleExpand(ws.id)}
@@ -111,7 +111,7 @@ export function WorkspacesApp() {
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t border-[#1F2430] px-4 py-2">
+                  <div className="border-t border-[outline-variant] px-4 py-2">
                     {wsBookmarks.length === 0 ? (
                       <div className="py-4 text-center text-sm text-outline">此工作区暂无书签</div>
                     ) : (

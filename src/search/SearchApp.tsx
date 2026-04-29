@@ -91,11 +91,11 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
     >
       <section
         className={[
-          "mx-auto flex w-full max-w-3xl flex-col border border-[#1F2430] bg-surface shadow-2xl shadow-black/40",
+          "mx-auto flex w-full max-w-3xl flex-col border border-[outline-variant] bg-surface shadow-2xl shadow-black/40",
           mode === "modal" ? "h-[78vh] rounded-xl" : "min-h-screen"
         ].join(" ")}
       >
-        <div className="flex h-16 flex-none items-center gap-2 border-b border-[#1F2430] bg-surface-container px-4">
+        <div className="flex h-16 flex-none items-center gap-2 border-b border-[outline-variant] bg-surface-container px-4">
           <span className="text-lg text-outline">⌕</span>
           <input
             ref={inputRef}
@@ -131,7 +131,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
           ) : null}
         </div>
 
-        <footer className="flex flex-none items-center gap-2 border-t border-[#1F2430] bg-surface-container-low px-4 py-2 text-xs text-outline">
+        <footer className="flex flex-none items-center gap-2 border-t border-[outline-variant] bg-surface-container-low px-4 py-2 text-xs text-outline">
           <span>↑↓ 选择</span>
           <span>·</span>
           <span>Enter 打开</span>
@@ -174,7 +174,7 @@ function BookmarkRow({
           : "border-transparent hover:bg-surface-container-high"
       ].join(" ")}
     >
-      <div className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded border border-[#1F2430] bg-surface-container">
+      <div className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded border border-[outline-variant] bg-surface-container">
         {item.favicon ? (
           <img src={item.favicon} alt="" className="h-4 w-4" />
         ) : (
@@ -200,7 +200,7 @@ function BookmarkRow({
 
 function Kbd({ children }: { children: string }) {
   return (
-    <span className="rounded border border-[#282a2d] bg-[#1F2430] px-2 py-1 text-[11px] font-medium leading-none text-on-surface-variant">
+    <span className="rounded border border-[outline-variant] bg-[outline-variant] px-2 py-1 text-[11px] font-medium leading-none text-on-surface-variant">
       {children}
     </span>
   );

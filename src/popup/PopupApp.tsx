@@ -39,7 +39,7 @@ export function PopupApp() {
         工作区
       </button>
 
-      <div className="my-1 border-t border-[#1F2430]" />
+      <div className="my-1 border-t border-[outline-variant]" />
 
       <button
         onClick={() => openPage("settings.html")}

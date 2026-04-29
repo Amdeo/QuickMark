@@ -68,7 +68,7 @@ export function SettingsApp() {
 
       <section className="mb-6">
         <h2 className="mb-3 text-sm font-medium text-on-surface">保存行为</h2>
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#1F2430] bg-surface-container p-4">
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[outline-variant] bg-surface-container p-4">
           <input
             type="checkbox"
             className="mt-0.5 h-4 w-4 accent-primary"
@@ -86,7 +86,7 @@ export function SettingsApp() {
 
       <section className="mb-6">
         <h2 className="mb-3 text-sm font-medium text-on-surface">数据</h2>
-        <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
+        <div className="rounded-xl border border-[outline-variant] bg-surface-container p-4">
           <div className="flex items-center justify-between py-2">
             <div>
               <div className="text-sm text-on-surface">导出书签</div>
@@ -101,7 +101,7 @@ export function SettingsApp() {
             </button>
           </div>
 
-          <div className="my-2 border-t border-[#1F2430]" />
+          <div className="my-2 border-t border-[outline-variant]" />
 
           <div className="flex items-center justify-between py-2">
             <div>
@@ -133,7 +133,7 @@ export function SettingsApp() {
 
       <section>
         <h2 className="mb-3 text-sm font-medium text-on-surface">键盘快捷键</h2>
-        <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
+        <div className="rounded-xl border border-[outline-variant] bg-surface-container p-4">
           <div className="flex items-center justify-between py-2">
             <span className="text-sm text-on-surface">打开搜索</span>
             <div className="flex items-center gap-1">

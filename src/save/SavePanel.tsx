@@ -52,10 +52,10 @@ export function SavePanel({ tab, onSaved, onCancel }: SavePanelProps) {
 
   return (
     <div
-      className="w-full max-w-md rounded-xl border border-[#1F2430] bg-surface shadow-2xl shadow-black/40"
+      className="w-full max-w-md rounded-xl border border-[outline-variant] bg-surface shadow-2xl shadow-black/40"
       onKeyDown={handleKeyDown}
     >
-      <div className="flex h-14 items-center justify-between border-b border-[#1F2430] px-4">
+      <div className="flex h-14 items-center justify-between border-b border-[outline-variant] px-4">
         <h2 className="text-sm font-medium text-on-surface">保存书签</h2>
         <button
           type="button"
@@ -110,7 +110,7 @@ export function SavePanel({ tab, onSaved, onCancel }: SavePanelProps) {
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 border-t border-[#1F2430] px-4 py-3">
+      <div className="flex items-center justify-end gap-2 border-t border-[outline-variant] px-4 py-3">
         <button
           type="button"
           onClick={onCancel}

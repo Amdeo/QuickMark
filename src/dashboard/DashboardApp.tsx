@@ -141,15 +141,15 @@ export function DashboardApp() {
         <h1 className="mb-6 text-xl font-semibold">书签管理</h1>
 
         <div className="mb-6 grid grid-cols-3 gap-4">
-          <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
+          <div className="rounded-xl border border-[outline-variant] bg-surface-container p-4">
             <div className="text-2xl font-semibold text-primary">{stats.total}</div>
             <div className="mt-1 text-xs text-outline">全部书签</div>
           </div>
-          <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
+          <div className="rounded-xl border border-[outline-variant] bg-surface-container p-4">
             <div className="text-2xl font-semibold text-secondary">{stats.thisWeek}</div>
             <div className="mt-1 text-xs text-outline">本周新增</div>
           </div>
-          <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
+          <div className="rounded-xl border border-[outline-variant] bg-surface-container p-4">
             <div className="text-2xl font-semibold text-tertiary">{stats.topVisits}</div>
             <div className="mt-1 text-xs text-outline">最高访问</div>
           </div>
@@ -178,10 +178,10 @@ export function DashboardApp() {
           </select>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-[#1F2430]">
+        <div className="overflow-hidden rounded-xl border border-[outline-variant]">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#1F2430] text-xs text-on-surface-variant">
+              <tr className="border-b border-[outline-variant] text-xs text-on-surface-variant">
                 <th className="px-4 py-3 font-medium">书签</th>
                 <th className="px-4 py-3 font-medium">工作区</th>
                 <th className="px-4 py-3 font-medium">标签</th>
@@ -192,10 +192,10 @@ export function DashboardApp() {
             </thead>
             <tbody>
               {results.map((item) => (
-                <tr key={item.id} className="border-b border-[#1F2430]/50">
+                <tr key={item.id} className="border-b border-[outline-variant]/50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-6 w-6 flex-none items-center justify-center rounded border border-[#1F2430] bg-surface-container">
+                      <div className="flex h-6 w-6 flex-none items-center justify-center rounded border border-[outline-variant] bg-surface-container">
                         {item.favicon ? (
                           <img src={item.favicon} alt="" className="h-4 w-4" />
                         ) : (
@@ -271,16 +271,16 @@ export function DashboardApp() {
       {editingId && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(12, 14, 17, 0.28)", backdropFilter: "blur(6px)" }}
+          style={{ background: "rgba(0, 0, 0, 0.15)", backdropFilter: "blur(6px)" }}
           onClick={(e) => {
             if (e.target === e.currentTarget) cancelEdit();
           }}
         >
           <div
-            className="w-full max-w-md rounded-xl border border-[#1F2430] bg-surface shadow-2xl shadow-black/40"
+            className="w-full max-w-md rounded-xl border border-[outline-variant] bg-surface shadow-2xl shadow-black/40"
             onKeyDown={handleEditKeyDown}
           >
-            <div className="flex h-14 items-center justify-between border-b border-[#1F2430] px-4">
+            <div className="flex h-14 items-center justify-between border-b border-[outline-variant] px-4">
               <h2 className="text-sm font-medium text-on-surface">编辑书签</h2>
               <button
                 type="button"
@@ -337,7 +337,7 @@ export function DashboardApp() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-[#1F2430] px-4 py-3">
+            <div className="flex items-center justify-end gap-2 border-t border-[outline-variant] px-4 py-3">
               <button
                 type="button"
                 onClick={cancelEdit}

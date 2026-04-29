@@ -4,19 +4,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        surface: "#111317",
-        "surface-container-lowest": "#0c0e11",
-        "surface-container-low": "#1a1c1f",
-        "surface-container": "#1e2023",
-        "surface-container-high": "#282a2d",
-        "surface-container-highest": "#333538",
-        "on-surface": "#e2e2e6",
-        "on-surface-variant": "#c2c6d6",
-        outline: "#8c909f",
-        "outline-variant": "#424753",
-        primary: "#aec6ff",
-        "primary-container": "#4e8eff",
-        error: "#ffb4ab"
+        surface: "#ffffff",
+        "surface-container-lowest": "#ffffff",
+        "surface-container-low": "#f7f9fc",
+        "surface-container": "#f0f2f5",
+        "surface-container-high": "#e8ecf1",
+        "surface-container-highest": "#e0e5ec",
+        "on-surface": "#1a1c20",
+        "on-surface-variant": "#5c6270",
+        outline: "#8c929f",
+        "outline-variant": "#d1d5db",
+        primary: "#005ac1",
+        "primary-container": "#d6e3ff",
+        error: "#ba1a1a"
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"]

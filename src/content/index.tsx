@@ -41,7 +41,7 @@ function openOverlay(): void {
   host.style.alignItems = "flex-start";
   host.style.justifyContent = "center";
   host.style.padding = "8vh 16px 16px";
-  host.style.background = "rgba(12, 14, 17, 0.28)";
+  host.style.background = "rgba(0, 0, 0, 0.15)";
   host.style.backdropFilter = "blur(6px)";
 
   const shadow = host.attachShadow({ mode: "open" });
@@ -95,7 +95,7 @@ function openSavePanel(tab: TabSnapshot): void {
   host.style.alignItems = "center";
   host.style.justifyContent = "center";
   host.style.padding = "16px";
-  host.style.background = "rgba(12, 14, 17, 0.28)";
+  host.style.background = "rgba(0, 0, 0, 0.15)";
   host.style.backdropFilter = "blur(6px)";
 
   const shadow = host.attachShadow({ mode: "open" });
