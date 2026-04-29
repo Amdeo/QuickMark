@@ -6,7 +6,8 @@
   "permissions": ["storage", "tabs", "scripting"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "action": {
-    "default_title": "Open QuickMark"
+    "default_title": "Open QuickMark",
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "assets/background.js",
