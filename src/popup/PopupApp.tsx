@@ -1,6 +1,6 @@
 export function PopupApp() {
   const handleSearch = () => {
-    chrome.runtime.sendMessage({ type: "QUICKMARK_TOGGLE" });
+    chrome.runtime.sendMessage({ type: "QUICKMARK_TRIGGER_SEARCH" });
     window.close();
   };
 

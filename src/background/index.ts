@@ -2,10 +2,6 @@ import { createBookmarkRepository } from "../repositories/bookmarkRepository";
 
 const repository = createBookmarkRepository();
 
-chrome.action.onClicked.addListener(() => {
-  void toggleSearchOverlay();
-});
-
 chrome.commands.onCommand.addListener((command) => {
   if (command === "open-search") {
     void toggleSearchOverlay();
@@ -19,6 +15,10 @@ chrome.commands.onCommand.addListener((command) => {
 chrome.runtime.onMessage.addListener((message: { type?: string; url?: string }) => {
   if (message.type === "QUICKMARK_OPEN_NEW_TAB" && message.url) {
     void chrome.tabs.create({ url: message.url, active: true });
+  }
+
+  if (message.type === "QUICKMARK_TRIGGER_SEARCH") {
+    void toggleSearchOverlay();
   }
 });
 
