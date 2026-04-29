@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { exportBookmarks, importFromJson, importFromHtml } from "./importExport";
 
 interface Settings {
   showSavePanel: boolean;
@@ -9,6 +10,8 @@ const STORAGE_KEY = "quickmark.settings";
 
 export function SettingsApp() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     chrome.storage.local.get({ [STORAGE_KEY]: DEFAULT_SETTINGS }, (result) => {
@@ -20,6 +23,35 @@ export function SettingsApp() {
     const next = { ...settings, showSavePanel: !settings.showSavePanel };
     setSettings(next);
     chrome.storage.local.set({ [STORAGE_KEY]: next });
+  };
+
+  const handleExport = () => {
+    void exportBookmarks();
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = file.name.endsWith(".html")
+        ? await importFromHtml(file)
+        : await importFromJson(file);
+
+      setImportStatus(
+        `Imported ${result.importedBookmarks} bookmarks` +
+          (result.importedWorkspaces > 0 ? `, ${result.importedWorkspaces} workspaces` : "") +
+          (result.skipped > 0 ? `, skipped ${result.skipped} duplicates` : "")
+      );
+    } catch {
+      setImportStatus("Import failed. Check file format.");
+    }
+
+    event.target.value = "";
   };
 
   const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
@@ -51,6 +83,53 @@ export function SettingsApp() {
             </div>
           </div>
         </label>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="mb-3 text-sm font-medium text-on-surface">Data</h2>
+        <div className="rounded-xl border border-[#1F2430] bg-surface-container p-4">
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <div className="text-sm text-on-surface">Export Bookmarks</div>
+              <div className="text-xs text-outline">Download all bookmarks and workspaces as JSON</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="rounded-lg border border-outline-variant px-3 py-1.5 text-sm text-on-surface hover:bg-surface-container-high"
+            >
+              Export
+            </button>
+          </div>
+
+          <div className="my-2 border-t border-[#1F2430]" />
+
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <div className="text-sm text-on-surface">Import Bookmarks</div>
+              <div className="text-xs text-outline">Import from QuickMark JSON or browser HTML</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleImportClick}
+              className="rounded-lg border border-outline-variant px-3 py-1.5 text-sm text-on-surface hover:bg-surface-container-high"
+            >
+              Import
+            </button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,.html"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          {importStatus && (
+            <div className="mt-2 text-xs text-secondary">{importStatus}</div>
+          )}
+        </div>
       </section>
 
       <section>
