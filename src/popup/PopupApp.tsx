@@ -10,7 +10,7 @@ export function PopupApp() {
   };
 
   return (
-    <div className="w-52 bg-surface p-2">
+    <div className="w-52 rounded-xl border border-outline-variant bg-surface p-2 shadow-sm">
       <div className="mb-1 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.05em] text-outline">
         QuickMark
       </div>
@@ -39,7 +39,7 @@ export function PopupApp() {
         工作区
       </button>
 
-      <div className="my-1 border-t border-[outline-variant]" />
+      <div className="my-1 border-t border-outline-variant" />
 
       <button
         onClick={() => openPage("settings.html")}
