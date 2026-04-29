@@ -10,7 +10,7 @@ export function PopupApp() {
   };
 
   return (
-    <div className="w-52 rounded-xl border border-outline-variant bg-surface p-2 shadow-sm">
+    <div className="w-52 rounded-xl border border-gray-400 bg-surface p-2 shadow-md">
       <div className="mb-1 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.05em] text-outline">
         QuickMark
       </div>
