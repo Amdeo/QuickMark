@@ -53,7 +53,7 @@ function openOverlay(): void {
   const styleLink = document.createElement("link");
   styleLink.id = STYLE_ID;
   styleLink.rel = "stylesheet";
-  styleLink.href = chrome.runtime.getURL("assets/search.css");
+  styleLink.href = chrome.runtime.getURL("assets/styles.css");
 
   const app = document.createElement("div");
   app.style.width = "min(768px, 100%)";
@@ -106,7 +106,7 @@ function openSavePanel(tab: TabSnapshot): void {
   const shadow = host.attachShadow({ mode: "open" });
   const styleLink = document.createElement("link");
   styleLink.rel = "stylesheet";
-  styleLink.href = chrome.runtime.getURL("assets/search.css");
+  styleLink.href = chrome.runtime.getURL("assets/styles.css");
 
   const app = document.createElement("div");
   app.style.width = "min(448px, 100%)";
