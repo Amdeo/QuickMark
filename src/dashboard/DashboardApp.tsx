@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BookmarkItem } from "../domain/types";
 import { searchBookmarks } from "../domain/search";
 import { createBookmarkRepository } from "../repositories/bookmarkRepository";
+import { TagInput } from "../components/TagInput";
+import { WorkspaceSelect } from "../components/WorkspaceSelect";
 
 const repository = createBookmarkRepository();
 
@@ -22,6 +24,15 @@ export function DashboardApp() {
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editUrl, setEditUrl] = useState("");
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [editWorkspaceId, setEditWorkspaceId] = useState<string | null>(null);
+  const [editNotes, setEditNotes] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const editTitleRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     async function load() {
       const items = await repository.list();
@@ -41,12 +52,59 @@ export function DashboardApp() {
     return { total, thisWeek, topVisits };
   }, [bookmarks]);
 
+  function startEdit(item: BookmarkItem) {
+    setEditingId(item.id);
+    setEditTitle(item.title);
+    setEditUrl(item.url);
+    setEditTags(item.tags);
+    setEditWorkspaceId(item.workspaceId);
+    setEditNotes(item.notes);
+    setTimeout(() => editTitleRef.current?.focus(), 0);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditTitle("");
+    setEditUrl("");
+    setEditTags([]);
+    setEditWorkspaceId(null);
+    setEditNotes("");
+  }
+
+  async function handleUpdate() {
+    if (!editingId) return;
+    setEditSaving(true);
+    const updated = await repository.update(editingId, {
+      title: editTitle,
+      url: editUrl,
+      tags: editTags,
+      workspaceId: editWorkspaceId,
+      notes: editNotes
+    });
+    setEditSaving(false);
+    if (updated) {
+      setBookmarks((items) => items.map((item) => (item.id === editingId ? updated : item)));
+    }
+    cancelEdit();
+  }
+
   async function handleRemove(id: string) {
     if (!confirm("Delete this bookmark?")) {
       return;
     }
     await repository.remove(id);
     setBookmarks((items) => items.filter((item) => item.id !== id));
+  }
+
+  function handleEditKeyDown(event: React.KeyboardEvent) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelEdit();
+    }
+    if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+      event.preventDefault();
+      void handleUpdate();
+    }
   }
 
   return (
@@ -128,14 +186,24 @@ export function DashboardApp() {
                     {item.lastVisitedAt ? formatRelativeTime(item.lastVisitedAt) : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => void handleRemove(item.id)}
-                      className="text-on-surface-variant transition-colors hover:text-error"
-                      title="Delete"
-                    >
-                      🗑
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(item)}
+                        className="text-on-surface-variant transition-colors hover:text-primary"
+                        title="Edit"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleRemove(item.id)}
+                        className="text-on-surface-variant transition-colors hover:text-error"
+                        title="Delete"
+                      >
+                        🗑
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -149,6 +217,96 @@ export function DashboardApp() {
           )}
         </div>
       </div>
+
+      {editingId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(12, 14, 17, 0.28)", backdropFilter: "blur(6px)" }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) cancelEdit();
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-[#1F2430] bg-surface shadow-2xl shadow-black/40"
+            onKeyDown={handleEditKeyDown}
+          >
+            <div className="flex h-14 items-center justify-between border-b border-[#1F2430] px-4">
+              <h2 className="text-sm font-medium text-on-surface">Edit Bookmark</h2>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="text-on-surface-variant hover:text-on-surface"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4 p-4">
+              <div>
+                <label className="mb-1 block text-xs text-on-surface-variant">Title</label>
+                <input
+                  ref={editTitleRef}
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-on-surface-variant">URL</label>
+                <input
+                  type="text"
+                  value={editUrl}
+                  onChange={(e) => setEditUrl(e.target.value)}
+                  className="w-full rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-on-surface-variant">Workspace</label>
+                <WorkspaceSelect value={editWorkspaceId} onChange={setEditWorkspaceId} />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-on-surface-variant">Tags</label>
+                <div className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2">
+                  <TagInput tags={editTags} onChange={setEditTags} placeholder="Add tags..." />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-on-surface-variant">Notes</label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Optional notes..."
+                  className="h-20 w-full resize-none rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-[#1F2430] px-4 py-3">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="rounded-lg border border-outline-variant px-4 py-2 text-sm text-on-surface hover:bg-surface-container-high"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleUpdate()}
+                disabled={editSaving}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary hover:bg-primary-container disabled:opacity-50"
+              >
+                {editSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
