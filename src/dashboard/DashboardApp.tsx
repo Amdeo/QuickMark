@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { BookmarkItem } from "../domain/types";
+import type { BookmarkItem, Workspace } from "../domain/types";
 import { searchBookmarks } from "../domain/search";
 import { createBookmarkRepository } from "../repositories/bookmarkRepository";
+import { createWorkspaceRepository } from "../repositories/workspaceRepository";
 import { TagInput } from "../components/TagInput";
 import { WorkspaceSelect } from "../components/WorkspaceSelect";
 
 const repository = createBookmarkRepository();
+const workspaceRepository = createWorkspaceRepository();
 
 function formatRelativeTime(timestamp: number): string {
   const diff = Date.now() - timestamp;
@@ -21,7 +23,9 @@ function formatRelativeTime(timestamp: number): string {
 
 export function DashboardApp() {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [query, setQuery] = useState("");
+  const [workspaceFilter, setWorkspaceFilter] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -35,14 +39,30 @@ export function DashboardApp() {
 
   useEffect(() => {
     async function load() {
-      const items = await repository.list();
+      const [items, wsList] = await Promise.all([
+        repository.list(),
+        workspaceRepository.list()
+      ]);
       setBookmarks(items);
+      setWorkspaces(wsList);
       setIsLoading(false);
     }
     void load();
   }, []);
 
-  const results = useMemo(() => searchBookmarks(bookmarks, query), [bookmarks, query]);
+  const workspaceMap = useMemo(() => {
+    const map = new Map<string, Workspace>();
+    for (const ws of workspaces) {
+      map.set(ws.id, ws);
+    }
+    return map;
+  }, [workspaces]);
+
+  const results = useMemo(() => {
+    const searched = searchBookmarks(bookmarks, query);
+    if (workspaceFilter === "all") return searched;
+    return searched.filter((item) => item.workspaceId === workspaceFilter);
+  }, [bookmarks, query, workspaceFilter]);
 
   const stats = useMemo(() => {
     const total = bookmarks.length;
@@ -51,6 +71,14 @@ export function DashboardApp() {
     const topVisits = bookmarks.length > 0 ? Math.max(...bookmarks.map((b) => b.visitCount)) : 0;
     return { total, thisWeek, topVisits };
   }, [bookmarks]);
+
+  async function handleOpen(item: BookmarkItem) {
+    const updated = await repository.markVisited(item.id);
+    if (updated) {
+      setBookmarks((items) => items.map((i) => (i.id === item.id ? updated : i)));
+    }
+    window.open(item.url, "_blank", "noopener,noreferrer");
+  }
 
   function startEdit(item: BookmarkItem) {
     setEditingId(item.id);
@@ -127,15 +155,27 @@ export function DashboardApp() {
           </div>
         </div>
 
-        <div className="relative mb-4">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-outline">⌕</span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search bookmarks..."
-            className="w-full rounded-lg border border-outline-variant bg-surface-container py-2 pl-9 pr-3 text-sm text-on-surface outline-none focus:border-primary placeholder:text-outline"
-            spellCheck={false}
-          />
+        <div className="mb-4 flex gap-3">
+          <div className="relative flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-outline">⌕</span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search bookmarks..."
+              className="w-full rounded-lg border border-outline-variant bg-surface-container py-2 pl-9 pr-3 text-sm text-on-surface outline-none focus:border-primary placeholder:text-outline"
+              spellCheck={false}
+            />
+          </div>
+          <select
+            value={workspaceFilter}
+            onChange={(e) => setWorkspaceFilter(e.target.value)}
+            className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+          >
+            <option value="all">All Workspaces</option>
+            {workspaces.map((ws) => (
+              <option key={ws.id} value={ws.id}>{ws.name}</option>
+            ))}
+          </select>
         </div>
 
         <div className="overflow-hidden rounded-xl border border-[#1F2430]">
@@ -143,6 +183,7 @@ export function DashboardApp() {
             <thead>
               <tr className="border-b border-[#1F2430] text-xs text-on-surface-variant">
                 <th className="px-4 py-3 font-medium">Bookmark</th>
+                <th className="px-4 py-3 font-medium">Workspace</th>
                 <th className="px-4 py-3 font-medium">Tags</th>
                 <th className="px-4 py-3 font-medium">Visits</th>
                 <th className="px-4 py-3 font-medium">Last Visited</th>
@@ -164,10 +205,19 @@ export function DashboardApp() {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="truncate font-medium">{item.title}</div>
+                        <button
+                          type="button"
+                          onClick={() => void handleOpen(item)}
+                          className="truncate font-medium text-left hover:text-primary"
+                        >
+                          {item.title}
+                        </button>
                         <div className="text-xs text-outline">{item.domain}</div>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {item.workspaceId ? (workspaceMap.get(item.workspaceId)?.name ?? "—") : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
