@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickMark Save Panel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-surface": "#e2e2e6",
+                        "on-secondary-fixed-variant": "#005137",
+                        "primary-fixed-dim": "#aec6ff",
+                        "on-secondary-fixed": "#002114",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "on-secondary": "#003825",
+                        "on-primary-fixed": "#001a42",
+                        "surface": "#111317",
+                        "tertiary-fixed": "#ffdcc3",
+                        "tertiary-fixed-dim": "#ffb77d",
+                        "surface-bright": "#37393d",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#e2e2e6",
+                        "on-tertiary-fixed": "#2f1500",
+                        "secondary-fixed-dim": "#45dfa4",
+                        "error": "#ffb4ab",
+                        "on-primary-container": "#00275d",
+                        "secondary": "#45dfa4",
+                        "secondary-container": "#00bd85",
+                        "on-background": "#e2e2e6",
+                        "inverse-on-surface": "#2f3034",
+                        "surface-container-lowest": "#0c0e11",
+                        "outline": "#8c909f",
+                        "primary": "#aec6ff",
+                        "on-primary": "#002e6a",
+                        "surface-container": "#1e2023",
+                        "on-surface-variant": "#c2c6d6",
+                        "surface-tint": "#aec6ff",
+                        "surface-container-high": "#282a2d",
+                        "background": "#111317",
+                        "on-primary-fixed-variant": "#004395",
+                        "secondary-fixed": "#68fcbf",
+                        "outline-variant": "#424753",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-variant": "#333538",
+                        "inverse-primary": "#005ac3",
+                        "surface-dim": "#111317",
+                        "error-container": "#93000a",
+                        "on-error": "#690005",
+                        "on-secondary-container": "#00452e",
+                        "primary-container": "#4e8eff",
+                        "surface-container-highest": "#333538",
+                        "on-tertiary": "#4d2600",
+                        "surface-container-low": "#1a1c1f",
+                        "tertiary": "#ffb77d",
+                        "tertiary-container": "#da7702",
+                        "on-tertiary-container": "#432100"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        lg: "24px",
+                        md: "16px",
+                        xl: "32px",
+                        xs: "4px",
+                        gutter: "12px",
+                        "container-padding": "16px",
+                        unit: "4px",
+                        sm: "8px"
+                    },
+                    fontFamily: {
+                        "label-caps": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "kbd-label": ["Inter"]
+                    },
+                    fontSize: {
+                        "label-caps": ["11px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "700" }],
+                        "headline-sm": ["18px", { lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600" }],
+                        "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0em", fontWeight: "400" }],
+                        "body-sm": ["13px", { lineHeight: "18px", letterSpacing: "0em", fontWeight: "400" }],
+                        "kbd-label": ["12px", { lineHeight: "12px", letterSpacing: "0em", fontWeight: "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            /* Simulating a browser extension popup window constraints */
+            width: 400px;
+            height: 600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body-md text-body-md text-on-surface">
+<!-- Popup Container -->
+<div class="w-[360px] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col relative backdrop-blur-xl bg-opacity-90">
+<!-- Header -->
+<header class="flex items-center justify-between px-md py-sm border-b border-outline-variant bg-surface-container-lowest/50">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+<h1 class="font-headline-sm text-headline-sm text-on-surface">Save Bookmark</h1>
+</div>
+<div class="flex items-center gap-xs">
+<div class="px-2 py-1 bg-surface-container-highest rounded flex items-center gap-1 border border-outline-variant/50">
+<span class="font-kbd-label text-kbd-label text-on-surface-variant">⌘</span>
+<span class="font-kbd-label text-kbd-label text-on-surface-variant">S</span>
+</div>
+</div>
+</header>
+<!-- Main Content Form -->
+<main class="flex-1 p-md flex flex-col gap-md overflow-y-auto">
+<!-- Title & URL Group (Pre-filled state) -->
+<div class="space-y-sm">
+<div class="relative group">
+<input class="w-full bg-surface-container border border-transparent focus:border-primary focus:ring-1 focus:ring-primary/20 rounded-lg px-sm py-2 font-body-md text-body-md text-on-surface placeholder-on-surface-variant/50 transition-all outline-none" placeholder="Page Title" type="text" value="Figma to Code - The Ultimate Guide | Design Systems"/>
+<div class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px] cursor-pointer hover:text-on-surface">edit</span>
+</div>
+</div>
+<div class="flex items-center gap-2 px-sm text-on-surface-variant font-body-sm text-body-sm truncate">
+<span class="material-symbols-outlined text-[14px]">link</span>
+<span class="truncate">https://designsystems.com/articles/figma-to-code-guide</span>
+</div>
+</div>
+<!-- Workspace Selector -->
+<div class="space-y-xs relative">
+<label class="font-label-caps text-label-caps text-on-surface-variant ml-1">Workspace</label>
+<button class="w-full bg-surface-container hover:bg-surface-container-high border border-outline-variant rounded-lg px-sm py-2 flex items-center justify-between text-left transition-colors focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-[18px]">grid_view</span>
+<span class="font-body-md text-body-md text-on-surface">Design Resources</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">unfold_more</span>
+</button>
+</div>
+<!-- Tags Input with AI Suggestions -->
+<div class="space-y-xs">
+<div class="flex items-center justify-between ml-1">
+<label class="font-label-caps text-label-caps text-on-surface-variant">Tags</label>
+<div class="flex items-center gap-1 text-primary-fixed-dim">
+<span class="material-symbols-outlined text-[12px] animate-pulse" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-label-caps text-[10px] uppercase tracking-wider">AI Auto-Tagged</span>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant rounded-lg p-xs flex flex-wrap gap-xs focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+<!-- Existing/AI Tags -->
+<div class="flex items-center gap-1 px-2 py-1 bg-surface-container-highest rounded text-on-surface font-body-sm text-body-sm border border-outline-variant/50">
+                        figma
+                        <span class="material-symbols-outlined text-[14px] text-on-surface-variant hover:text-on-surface cursor-pointer">close</span>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 bg-surface-container-highest rounded text-on-surface font-body-sm text-body-sm border border-outline-variant/50">
+                        development
+                        <span class="material-symbols-outlined text-[14px] text-on-surface-variant hover:text-on-surface cursor-pointer">close</span>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 bg-surface-container-highest rounded text-on-surface font-body-sm text-body-sm border border-outline-variant/50">
+                        ui-ux
+                        <span class="material-symbols-outlined text-[14px] text-on-surface-variant hover:text-on-surface cursor-pointer">close</span>
+</div>
+<!-- Input -->
+<input class="flex-1 min-w-[80px] bg-transparent border-none outline-none focus:ring-0 px-1 py-1 font-body-sm text-body-sm text-on-surface placeholder-on-surface-variant/50" placeholder="Add tag..." type="text"/>
+</div>
+</div>
+<!-- Notes Area -->
+<div class="space-y-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant ml-1">Why save this?</label>
+<textarea class="w-full bg-surface-container border border-outline-variant rounded-lg px-sm py-2 font-body-md text-body-md text-on-surface placeholder-on-surface-variant/50 transition-all outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none h-20" placeholder="Optional notes..."></textarea>
+</div>
+</main>
+<!-- Footer Actions -->
+<footer class="p-md border-t border-outline-variant bg-surface-container-lowest flex justify-end gap-sm">
+<button class="px-md py-2 rounded-lg border border-outline-variant text-on-surface font-body-md text-body-md font-medium hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-outline-variant">
+                Cancel
+            </button>
+<button class="px-md py-2 rounded-lg bg-primary text-on-primary font-body-md text-body-md font-medium hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-[0_0_15px_rgba(174,198,255,0.15)] flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface">
+                Save Bookmark
+                <span class="material-symbols-outlined text-[18px]">done</span>
+</button>
+</footer>
+</div>
+</body></html>

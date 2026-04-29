@@ -59,10 +59,10 @@ export function DashboardApp() {
   }, [workspaces]);
 
   const results = useMemo(() => {
-    const searched = searchBookmarks(bookmarks, query);
+    const searched = searchBookmarks(bookmarks, query, workspaces);
     if (workspaceFilter === "all") return searched;
     return searched.filter((item) => item.workspaceId === workspaceFilter);
-  }, [bookmarks, query, workspaceFilter]);
+  }, [bookmarks, query, workspaces, workspaceFilter]);
 
   const stats = useMemo(() => {
     const total = bookmarks.length;

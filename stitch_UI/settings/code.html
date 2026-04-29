@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickMark - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#e2e2e6",
+                        "on-secondary-fixed-variant": "#005137",
+                        "primary-fixed-dim": "#aec6ff",
+                        "on-secondary-fixed": "#002114",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "on-secondary": "#003825",
+                        "on-primary-fixed": "#001a42",
+                        "surface": "#111317",
+                        "tertiary-fixed": "#ffdcc3",
+                        "tertiary-fixed-dim": "#ffb77d",
+                        "surface-bright": "#37393d",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#e2e2e6",
+                        "on-tertiary-fixed": "#2f1500",
+                        "secondary-fixed-dim": "#45dfa4",
+                        "error": "#ffb4ab",
+                        "on-primary-container": "#00275d",
+                        "secondary": "#45dfa4",
+                        "secondary-container": "#00bd85",
+                        "on-background": "#e2e2e6",
+                        "inverse-on-surface": "#2f3034",
+                        "surface-container-lowest": "#0c0e11",
+                        "outline": "#8c909f",
+                        "primary": "#aec6ff",
+                        "on-primary": "#002e6a",
+                        "surface-container": "#1e2023",
+                        "on-surface-variant": "#c2c6d6",
+                        "surface-tint": "#aec6ff",
+                        "surface-container-high": "#282a2d",
+                        "background": "#111317",
+                        "on-primary-fixed-variant": "#004395",
+                        "secondary-fixed": "#68fcbf",
+                        "outline-variant": "#424753",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-variant": "#333538",
+                        "inverse-primary": "#005ac3",
+                        "surface-dim": "#111317",
+                        "error-container": "#93000a",
+                        "on-error": "#690005",
+                        "on-secondary-container": "#00452e",
+                        "primary-container": "#4e8eff",
+                        "surface-container-highest": "#333538",
+                        "on-tertiary": "#4d2600",
+                        "surface-container-low": "#1a1c1f",
+                        "tertiary": "#ffb77d",
+                        "tertiary-container": "#da7702",
+                        "on-tertiary-container": "#432100"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "lg": "24px",
+                        "md": "16px",
+                        "xl": "32px",
+                        "xs": "4px",
+                        "gutter": "12px",
+                        "container-padding": "16px",
+                        "unit": "4px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "kbd-label": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "body-sm": ["13px", { "lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "kbd-label": ["12px", { "lineHeight": "12px", "letterSpacing": "0em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333538; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #424753; }
+    </style>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col font-body-md selection:bg-primary/20 selection:text-primary">
+<!-- TopNavBar Shared Component -->
+<nav class="fixed w-full top-0 z-50 bg-slate-950/70 backdrop-blur-xl border-b border-slate-800/50 shadow-sm shadow-blue-500/5 flex justify-between items-center h-14 px-4 font-inter text-sm tracking-tight text-slate-400 focus-within:ring-1 focus-within:ring-blue-500/50 duration-200">
+<div class="flex items-center gap-6">
+<span class="text-lg font-bold text-slate-100 tracking-tighter">QuickMark</span>
+<div class="relative flex items-center group">
+<span class="material-symbols-outlined absolute left-2 text-slate-500 group-focus-within:text-blue-400 transition-colors text-[18px]">search</span>
+<input class="bg-slate-900/50 border border-slate-800/80 rounded-md outline-none pl-8 pr-3 py-1.5 w-64 text-slate-100 placeholder:text-slate-500 text-sm focus:border-blue-500/50 focus:bg-slate-900 transition-all" placeholder="Search commands..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<!-- Active Settings Icon -->
+<button class="p-1.5 rounded-md flex items-center justify-center text-blue-400 ring-1 ring-blue-500/20 bg-blue-500/5 transition-colors">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">settings</span>
+</button>
+<!-- Inactive Account Icon -->
+<button class="p-1.5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-colors">
+<span class="material-symbols-outlined text-[20px]">account_circle</span>
+</button>
+</div>
+</nav>
+<!-- Main Settings Layout -->
+<main class="flex-1 pt-24 pb-20 px-6 max-w-5xl mx-auto w-full flex gap-10">
+<!-- Local Navigation (Categories) -->
+<aside class="w-56 shrink-0 flex flex-col gap-1 sticky top-24 h-fit">
+<h2 class="font-label-caps text-label-caps text-outline px-3 mb-2">Settings</h2>
+<button class="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-variant text-on-surface font-body-sm text-body-sm transition-colors text-left shadow-sm shadow-black/10 border border-outline-variant/30 relative">
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-r-full"></div>
+<span class="material-symbols-outlined text-[18px] text-primary" style="font-variation-settings: 'FILL' 1;">keyboard</span>
+                Shortcuts
+            </button>
+<button class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-body-sm text-body-sm transition-colors text-left">
+<span class="material-symbols-outlined text-[18px]">palette</span>
+                Appearance
+            </button>
+<button class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-body-sm text-body-sm transition-colors text-left">
+<span class="material-symbols-outlined text-[18px]">psychiatry</span>
+                AI Assistant
+            </button>
+<button class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-body-sm text-body-sm transition-colors text-left">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+                Sync
+            </button>
+<button class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high font-body-sm text-body-sm transition-colors text-left">
+<span class="material-symbols-outlined text-[18px]">import_export</span>
+                Import/Export
+            </button>
+</aside>
+<!-- Settings Canvas -->
+<div class="flex-1 flex flex-col gap-8 max-w-2xl">
+<!-- Shortcuts Section -->
+<section class="bg-surface-container border border-outline-variant rounded-xl p-0 overflow-hidden shadow-sm shadow-black/20 flex flex-col relative" id="shortcuts">
+<div class="p-6 border-b border-surface-container-highest bg-surface-container-low">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-primary">keyboard</span>
+                        Global Shortcuts
+                    </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Configure keyboard bindings for rapid navigation.</p>
+</div>
+<div class="flex flex-col">
+<!-- Shortcut Row -->
+<div class="flex justify-between items-center p-5 border-b border-surface-container-highest last:border-0 hover:bg-surface-container-highest/30 transition-colors group">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface">Toggle Command Bar</span>
+<span class="font-body-sm text-body-sm text-outline">Open the global search and command palette</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-dim border border-outline-variant/50 rounded-md shadow-inner group-hover:border-primary/40 transition-colors cursor-text">
+<span class="font-kbd-label text-kbd-label bg-surface border border-outline-variant px-1.5 py-0.5 rounded text-on-surface shadow-sm">⌘</span>
+<span class="font-kbd-label text-kbd-label bg-surface border border-outline-variant px-1.5 py-0.5 rounded text-on-surface shadow-sm">K</span>
+</div>
+</div>
+<!-- Shortcut Row -->
+<div class="flex justify-between items-center p-5 border-b border-surface-container-highest last:border-0 hover:bg-surface-container-highest/30 transition-colors group">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface">Save Active Tab</span>
+<span class="font-body-sm text-body-sm text-outline">Bookmark the current page instantly</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-dim border border-outline-variant/50 rounded-md shadow-inner group-hover:border-primary/40 transition-colors cursor-text">
+<span class="font-kbd-label text-kbd-label bg-surface border border-outline-variant px-1.5 py-0.5 rounded text-on-surface shadow-sm">⌘</span>
+<span class="font-kbd-label text-kbd-label bg-surface border border-outline-variant px-1.5 py-0.5 rounded text-on-surface shadow-sm">S</span>
+</div>
+</div>
+<!-- Shortcut Row -->
+<div class="flex justify-between items-center p-5 border-b border-surface-container-highest last:border-0 hover:bg-surface-container-highest/30 transition-colors group">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface">Focus Workspaces</span>
+<span class="font-body-sm text-body-sm text-outline">Switch to the workspaces view</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-dim border border-outline-variant/50 rounded-md shadow-inner group-hover:border-primary/40 transition-colors cursor-text">
+<span class="font-kbd-label text-kbd-label bg-surface border border-outline-variant px-1.5 py-0.5 rounded text-on-surface shadow-sm">⌥</span>
+<span class="font-kbd-label text-kbd-label bg-surface border border-outline-variant px-1.5 py-0.5 rounded text-on-surface shadow-sm">W</span>
+</div>
+</div>
+</div>
+</section>
+<!-- AI Assistant Section -->
+<section class="bg-surface-container border border-outline-variant rounded-xl p-0 overflow-hidden shadow-sm shadow-black/20 flex flex-col relative" id="ai">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
+<div class="p-6 border-b border-surface-container-highest bg-surface-container-low relative z-10">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-tertiary">psychiatry</span>
+                        AI Assistant
+                    </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Enhance your workflow with machine learning features.</p>
+</div>
+<div class="flex flex-col relative z-10">
+<!-- AI Row 1 -->
+<div class="flex justify-between items-center p-5 border-b border-surface-container-highest last:border-0 hover:bg-surface-container-highest/30 transition-colors">
+<div class="flex flex-col gap-1 pr-8">
+<div class="flex items-center gap-2">
+<span class="font-body-md text-body-md text-on-surface">Auto-Tagging</span>
+<span class="font-label-caps text-label-caps bg-primary-container/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full uppercase tracking-wider">Beta</span>
+</div>
+<span class="font-body-sm text-body-sm text-outline">Automatically suggest relevant tags based on page content when saving a bookmark.</span>
+</div>
+<!-- Toggle Active -->
+<div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full">
+<span class="absolute mx-auto h-3 w-8 rounded-full bg-primary/40 transition-colors duration-200"></span>
+<span class="absolute left-0 inline-block h-5 w-5 transform rounded-full border border-primary bg-on-primary shadow-sm transition-transform duration-200 translate-x-4"></span>
+</div>
+</div>
+<!-- AI Row 2 -->
+<div class="flex justify-between items-center p-5 border-b border-surface-container-highest last:border-0 hover:bg-surface-container-highest/30 transition-colors">
+<div class="flex flex-col pr-8">
+<span class="font-body-md text-body-md text-on-surface">Smart Summaries</span>
+<span class="font-body-sm text-body-sm text-outline">Generate brief summaries for articles directly in the preview pane.</span>
+</div>
+<!-- Toggle Inactive -->
+<div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full">
+<span class="absolute mx-auto h-3 w-8 rounded-full bg-surface-container-highest border border-outline-variant/50 transition-colors duration-200"></span>
+<span class="absolute left-0 inline-block h-4 w-4 transform rounded-full bg-outline shadow-sm transition-transform duration-200 translate-x-0.5"></span>
+</div>
+</div>
+</div>
+</section>
+<!-- Appearance Section -->
+<section class="bg-surface-container border border-outline-variant rounded-xl p-0 overflow-hidden shadow-sm shadow-black/20 flex flex-col" id="appearance">
+<div class="p-6 border-b border-surface-container-highest bg-surface-container-low">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-secondary">palette</span>
+                        Appearance
+                    </h3>
+</div>
+<div class="flex flex-col">
+<div class="flex justify-between items-center p-5 border-b border-surface-container-highest last:border-0 hover:bg-surface-container-highest/30 transition-colors">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface">Theme Preference</span>
+<span class="font-body-sm text-body-sm text-outline">Force dark mode or sync with system settings.</span>
+</div>
+<div class="flex bg-surface-dim border border-outline-variant rounded-lg p-1 gap-1">
+<button class="px-3 py-1.5 rounded-md font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">light_mode</span> Light
+                            </button>
+<button class="px-3 py-1.5 rounded-md bg-surface-variant text-on-surface shadow-sm border border-outline-variant/50 font-body-sm text-body-sm flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">dark_mode</span> Dark
+                            </button>
+<button class="px-3 py-1.5 rounded-md font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">desktop_windows</span> System
+                            </button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Footer Shared Component -->
+<footer class="fixed bottom-0 right-0 p-4 bg-slate-900/50 backdrop-blur-md flex gap-4 items-center font-mono text-[10px] uppercase tracking-widest opacity-80 hover:opacity-100 duration-300 z-50">
+<span class="text-slate-500">QuickMark v1.0</span>
+<span class="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">⌘K Search</span>
+<span class="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">⌘S Save</span>
+<span class="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">⌥W Workspaces</span>
+<span class="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">? Help</span>
+</footer>
+</body></html>

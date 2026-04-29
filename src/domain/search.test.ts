@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BookmarkItem } from "./types";
+import type { BookmarkItem, Workspace } from "./types";
 import { searchBookmarks } from "./search";
 
 const items: BookmarkItem[] = [
@@ -12,8 +12,8 @@ const items: BookmarkItem[] = [
     updatedAt: 100,
     lastVisitedAt: 100,
     visitCount: 2,
-    tags: [],
-    workspaceId: null,
+    tags: ["frontend", "docs"],
+    workspaceId: "ws1",
     notes: ""
   },
   {
@@ -25,8 +25,8 @@ const items: BookmarkItem[] = [
     updatedAt: 300,
     lastVisitedAt: 300,
     visitCount: 1,
-    tags: [],
-    workspaceId: null,
+    tags: ["frontend", "routing"],
+    workspaceId: "ws2",
     notes: ""
   },
   {
@@ -38,10 +38,15 @@ const items: BookmarkItem[] = [
     updatedAt: 200,
     lastVisitedAt: 200,
     visitCount: 9,
-    tags: [],
+    tags: ["backend", "docs"],
     workspaceId: null,
     notes: ""
   }
+];
+
+const workspaces: Workspace[] = [
+  { id: "ws1", name: "Personal", createdAt: 1, updatedAt: 1 },
+  { id: "ws2", name: "Work", createdAt: 1, updatedAt: 1 }
 ];
 
 describe("searchBookmarks", () => {
@@ -58,5 +63,33 @@ describe("searchBookmarks", () => {
     const sameRecency = items.map((item) => ({ ...item, lastVisitedAt: 100 }));
 
     expect(searchBookmarks(sameRecency, "").map((item) => item.id)).toEqual(["c", "a", "b"]);
+  });
+
+  it("filters by tag with # syntax", () => {
+    expect(searchBookmarks(items, "#docs").map((item) => item.id)).toEqual(["c", "a"]);
+    expect(searchBookmarks(items, "#frontend").map((item) => item.id)).toEqual(["b", "a"]);
+  });
+
+  it("filters by multiple tags", () => {
+    expect(searchBookmarks(items, "#docs #frontend").map((item) => item.id)).toEqual(["a"]);
+  });
+
+  it("filters by workspace with @ syntax", () => {
+    expect(searchBookmarks(items, "@personal", workspaces).map((item) => item.id)).toEqual(["a"]);
+    expect(searchBookmarks(items, "@work", workspaces).map((item) => item.id)).toEqual(["b"]);
+  });
+
+  it("combines text search with tag and workspace filters", () => {
+    expect(searchBookmarks(items, "react @personal", workspaces).map((item) => item.id)).toEqual(["a"]);
+    expect(searchBookmarks(items, "react #routing", workspaces).map((item) => item.id)).toEqual(["b"]);
+  });
+
+  it("ignores @workspace filter when workspaces list is not provided", () => {
+    expect(searchBookmarks(items, "@personal").map((item) => item.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("returns empty result when no matches", () => {
+    expect(searchBookmarks(items, "#nonexistent")).toEqual([]);
+    expect(searchBookmarks(items, "@nonexistent", workspaces)).toEqual([]);
   });
 });
