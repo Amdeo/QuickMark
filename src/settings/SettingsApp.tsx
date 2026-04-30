@@ -68,7 +68,7 @@ export function SettingsApp() {
 
       <section className="mb-6">
         <h2 className="mb-3 text-sm font-medium text-on-surface">保存行为</h2>
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[outline-variant] bg-surface-container p-4">
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant bg-surface-container p-4 transition-colors hover:border-outline">
           <input
             type="checkbox"
             className="mt-0.5 h-4 w-4 accent-primary"
@@ -86,32 +86,32 @@ export function SettingsApp() {
 
       <section className="mb-6">
         <h2 className="mb-3 text-sm font-medium text-on-surface">数据</h2>
-        <div className="rounded-xl border border-[outline-variant] bg-surface-container p-4">
+        <div className="rounded-xl border border-outline-variant bg-surface-container p-4">
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="text-sm text-on-surface">导出书签</div>
-              <div className="text-xs text-outline">将所有书签和工作区导出为 JSON</div>
+              <div className="text-sm font-medium text-on-surface">导出书签</div>
+              <div className="mt-0.5 text-xs text-outline">将所有书签和工作区导出为 JSON</div>
             </div>
             <button
               type="button"
               onClick={handleExport}
-              className="rounded-lg border border-outline-variant px-3 py-1.5 text-sm text-on-surface hover:bg-surface-container-high"
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-1.5 text-sm text-on-surface transition-colors hover:bg-surface-container-high"
             >
               导出
             </button>
           </div>
 
-          <div className="my-2 border-t border-[outline-variant]" />
+          <div className="my-2 border-t border-outline-variant" />
 
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="text-sm text-on-surface">导入书签</div>
-              <div className="text-xs text-outline">从 QuickMark JSON 或浏览器 HTML 书签文件导入</div>
+              <div className="text-sm font-medium text-on-surface">导入书签</div>
+              <div className="mt-0.5 text-xs text-outline">从 QuickMark JSON 或浏览器 HTML 书签文件导入</div>
             </div>
             <button
               type="button"
               onClick={handleImportClick}
-              className="rounded-lg border border-outline-variant px-3 py-1.5 text-sm text-on-surface hover:bg-surface-container-high"
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-1.5 text-sm text-on-surface transition-colors hover:bg-surface-container-high"
             >
               导入
             </button>
@@ -126,14 +126,16 @@ export function SettingsApp() {
           />
 
           {importStatus && (
-            <div className="mt-2 text-xs text-secondary">{importStatus}</div>
+            <div className="mt-3 rounded-lg bg-primary-container/50 px-3 py-2 text-xs text-primary">
+              {importStatus}
+            </div>
           )}
         </div>
       </section>
 
       <section>
         <h2 className="mb-3 text-sm font-medium text-on-surface">键盘快捷键</h2>
-        <div className="rounded-xl border border-[outline-variant] bg-surface-container p-4">
+        <div className="rounded-xl border border-outline-variant bg-surface-container p-4">
           <div className="flex items-center justify-between py-2">
             <span className="text-sm text-on-surface">打开搜索</span>
             <div className="flex items-center gap-1">
@@ -148,6 +150,14 @@ export function SettingsApp() {
               <ShortcutBadge>{isMac ? "⌘" : "Ctrl"}</ShortcutBadge>
               <ShortcutBadge>Shift</ShortcutBadge>
               <ShortcutBadge>S</ShortcutBadge>
+            </div>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-on-surface">打开书签管理</span>
+            <div className="flex items-center gap-1">
+              <ShortcutBadge>{isMac ? "⌘" : "Ctrl"}</ShortcutBadge>
+              <ShortcutBadge>Shift</ShortcutBadge>
+              <ShortcutBadge>E</ShortcutBadge>
             </div>
           </div>
           <div className="mt-3 text-xs text-outline">

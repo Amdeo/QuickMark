@@ -10,6 +10,10 @@ chrome.commands.onCommand.addListener((command) => {
   if (command === "save-current-page") {
     void saveActiveTab();
   }
+
+  if (command === "open-dashboard") {
+    void openDashboardOverlay();
+  }
 });
 
 chrome.runtime.onMessage.addListener((message: { type?: string; url?: string }) => {
@@ -19,6 +23,10 @@ chrome.runtime.onMessage.addListener((message: { type?: string; url?: string }) 
 
   if (message.type === "QUICKMARK_TRIGGER_SEARCH") {
     void toggleSearchOverlay();
+  }
+
+  if (message.type === "QUICKMARK_OPEN_DASHBOARD") {
+    void openDashboardOverlay();
   }
 });
 
@@ -36,6 +44,26 @@ async function toggleSearchOverlay(): Promise<void> {
     try {
       await injectContentScript(tab.id);
       await chrome.tabs.sendMessage(tab.id, { type: "QUICKMARK_TOGGLE" });
+    } catch {
+      await showBadge("ERR", "#93000a");
+    }
+  }
+}
+
+async function openDashboardOverlay(): Promise<void> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (!tab?.id || !tab.url || isUnsupportedUrl(tab.url)) {
+    await showBadge("ERR", "#93000a");
+    return;
+  }
+
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: "QUICKMARK_OPEN_DASHBOARD" });
+  } catch {
+    try {
+      await injectContentScript(tab.id);
+      await chrome.tabs.sendMessage(tab.id, { type: "QUICKMARK_OPEN_DASHBOARD" });
     } catch {
       await showBadge("ERR", "#93000a");
     }

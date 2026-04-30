@@ -3,13 +3,16 @@ import { createRoot, type Root } from "react-dom/client";
 import type { BookmarkItem, TabSnapshot } from "../domain/types";
 import { SavePanel } from "../save/SavePanel";
 import { SearchApp } from "../search/SearchApp";
+import { DashboardApp } from "../dashboard/DashboardApp";
 
 const HOST_ID = "quickmark-overlay-root";
 const STYLE_ID = "quickmark-overlay-style";
 const SAVE_PANEL_HOST_ID = "quickmark-save-panel-root";
+const DASHBOARD_HOST_ID = "quickmark-dashboard-root";
 
 let root: Root | undefined;
 let savePanelRoot: Root | undefined;
+let dashboardRoot: Root | undefined;
 
 chrome.runtime.onMessage.addListener((message: { type?: string; tab?: TabSnapshot }) => {
   if (message.type === "QUICKMARK_TOGGLE") {
@@ -17,6 +20,9 @@ chrome.runtime.onMessage.addListener((message: { type?: string; tab?: TabSnapsho
   }
   if (message.type === "QUICKMARK_OPEN_SAVE_PANEL" && message.tab) {
     openSavePanel(message.tab);
+  }
+  if (message.type === "QUICKMARK_OPEN_DASHBOARD") {
+    openDashboardOverlay();
   }
 });
 
@@ -70,6 +76,60 @@ function closeOverlay(): void {
   root?.unmount();
   root = undefined;
   document.getElementById(HOST_ID)?.remove();
+}
+
+function openDashboardOverlay(): void {
+  closeOverlay();
+  closeDashboardOverlay();
+  closeSavePanel();
+
+  const host = document.createElement("div");
+  host.id = DASHBOARD_HOST_ID;
+  host.style.position = "fixed";
+  host.style.inset = "0";
+  host.style.zIndex = "2147483647";
+  host.style.display = "flex";
+  host.style.alignItems = "flex-start";
+  host.style.justifyContent = "center";
+  host.style.padding = "5vh 16px 16px";
+  host.style.background = "rgba(0, 0, 0, 0.15)";
+  host.style.backdropFilter = "blur(6px)";
+
+  const shadow = host.attachShadow({ mode: "open" });
+  const styleLink = document.createElement("link");
+  styleLink.rel = "stylesheet";
+  styleLink.href = chrome.runtime.getURL("assets/styles.css");
+
+  const app = document.createElement("div");
+  app.style.width = "min(1280px, 100%)";
+
+  shadow.append(styleLink, app);
+  document.documentElement.appendChild(host);
+  document.addEventListener("keydown", handleDashboardKeyDown, true);
+
+  dashboardRoot = createRoot(app);
+  dashboardRoot.render(
+    <React.StrictMode>
+      <DashboardApp mode="modal" onClose={closeDashboardOverlay} />
+    </React.StrictMode>
+  );
+}
+
+function closeDashboardOverlay(): void {
+  document.removeEventListener("keydown", handleDashboardKeyDown, true);
+  dashboardRoot?.unmount();
+  dashboardRoot = undefined;
+  document.getElementById(DASHBOARD_HOST_ID)?.remove();
+}
+
+function handleDashboardKeyDown(event: KeyboardEvent): void {
+  if (event.key !== "Escape") {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  closeDashboardOverlay();
 }
 
 function handleOverlayKeyDown(event: KeyboardEvent): void {

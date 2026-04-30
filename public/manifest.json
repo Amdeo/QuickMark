@@ -40,6 +40,13 @@
         "mac": "Command+Shift+S"
       },
       "description": "Save current page to QuickMark"
+    },
+    "open-dashboard": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "Open QuickMark dashboard"
     }
   }
 }
