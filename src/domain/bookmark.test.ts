@@ -23,7 +23,9 @@ describe("bookmark domain helpers", () => {
       visitCount: 1,
       tags: [],
       workspaceId: null,
-      notes: ""
+      notes: "",
+      isFavorite: false,
+      isUnread: true
     });
   });
 
@@ -56,6 +58,19 @@ describe("bookmark domain helpers", () => {
     expect(updated.tags).toEqual(["dev", "ref"]);
     expect(updated.workspaceId).toBe("ws-1");
     expect(updated.notes).toBe("Important docs");
+    expect(updated.updatedAt).toBe(3000);
+    expect(updated.visitCount).toBe(2);
+  });
+
+  it("can update isFavorite and isUnread via touchBookmark", () => {
+    const original = bookmarkFromTab({ title: "Docs", url: "https://example.com" }, 1000);
+    const updated = touchBookmark(original, 3000, {
+      isFavorite: true,
+      isUnread: false
+    });
+
+    expect(updated.isFavorite).toBe(true);
+    expect(updated.isUnread).toBe(false);
     expect(updated.updatedAt).toBe(3000);
     expect(updated.visitCount).toBe(2);
   });

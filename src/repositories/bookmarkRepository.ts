@@ -47,7 +47,9 @@ export class ChromeBookmarkRepository implements BookmarkRepository {
           favicon: next.favicon,
           tags: options.tags ?? existing.tags,
           workspaceId: options.workspaceId !== undefined ? options.workspaceId : existing.workspaceId,
-          notes: options.notes ?? existing.notes
+          notes: options.notes ?? existing.notes,
+          isFavorite: existing.isFavorite,
+          isUnread: existing.isUnread,
         })
       : { ...next, ...options };
 

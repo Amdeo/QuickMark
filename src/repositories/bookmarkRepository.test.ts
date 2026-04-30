@@ -223,8 +223,10 @@ describe("ChromeBookmarkRepository", () => {
     const repository = new ChromeBookmarkRepository(storage);
 
     const items = await repository.list();
-    expect(items[0]).toMatchObject({ isFavorite: false, isUnread: true });
-    expect(items[1]).toMatchObject({ isFavorite: false, isUnread: false });
+    const unreadItem = items.find((i) => i.id === "https://old-unread.com");
+    const readItem = items.find((i) => i.id === "https://old-read.com");
+    expect(unreadItem).toMatchObject({ isFavorite: false, isUnread: true });
+    expect(readItem).toMatchObject({ isFavorite: false, isUnread: false });
   });
 
   it("saves a new bookmark with isUnread=true and isFavorite=false by default", async () => {
@@ -254,5 +256,8 @@ describe("ChromeBookmarkRepository", () => {
     expect(items.find((i) => i.id === a.id)?.workspaceId).toBe("ws-1");
     expect(items.find((i) => i.id === b.id)?.workspaceId).toBe("ws-1");
     expect(items.find((i) => i.id === c.id)?.workspaceId).toBeNull();
+    expect(items.find((i) => i.id === a.id)?.updatedAt).toBe(2000);
+    expect(items.find((i) => i.id === b.id)?.updatedAt).toBe(2000);
+    expect(items.find((i) => i.id === c.id)?.updatedAt).toBe(1000);
   });
 });
