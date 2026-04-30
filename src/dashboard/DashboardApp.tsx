@@ -595,6 +595,7 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
       onSave={handleUpdate}
       onCancelEdit={cancelEdit}
       editTitleRef={editTitleRef}
+      setBookmarks={setBookmarks}
     />;
   }
 
@@ -640,6 +641,7 @@ interface DashboardModalProps {
   onSave: () => void;
   onCancelEdit: () => void;
   editTitleRef: React.RefObject<HTMLInputElement>;
+  setBookmarks: React.Dispatch<React.SetStateAction<BookmarkItem[]>>;
 }
 
 function DashboardModal(props: DashboardModalProps) {
@@ -649,14 +651,48 @@ function DashboardModal(props: DashboardModalProps) {
     onClose, onOpen, onEdit, onRemove,
     editingId, editTitle, setEditTitle, editUrl, setEditUrl,
     editTags, setEditTags, editWorkspaceId, setEditWorkspaceId,
-    editNotes, setEditNotes, editSaving, onSave, onCancelEdit, editTitleRef
+    editNotes, setEditNotes, editSaving, onSave, onCancelEdit, editTitleRef,
+    setBookmarks
   } = props;
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const selectedItem = results[selectedIndex];
+  const [modalStatusFilter, setModalStatusFilter] = useState<"all" | "unread" | "favorite">("all");
+  const [modalSelectedIds, setModalSelectedIds] = useState<Set<string>>(new Set());
+
+  const modalResults = useMemo(() => {
+    let filtered = results;
+    if (modalStatusFilter === "unread") filtered = filtered.filter((i) => i.isUnread);
+    if (modalStatusFilter === "favorite") filtered = filtered.filter((i) => i.isFavorite);
+    return filtered;
+  }, [results, modalStatusFilter]);
+
+  function modalToggleSelection(id: string) {
+    setModalSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    setModalSelectedIds((prev) => {
+      const resultIds = new Set(modalResults.map((r) => r.id));
+      const next = new Set([...prev].filter((id) => resultIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [modalResults]);
+
+  const selectedItem = modalResults[selectedIndex];
+
+  function modalToggleFavorite(id: string, current: boolean) {
+    void repository.update(id, { isFavorite: !current }).then((updated) => {
+      if (updated) setBookmarks((prev) => prev.map((i) => i.id === id ? updated : i));
+    });
+  }
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -664,18 +700,18 @@ function DashboardModal(props: DashboardModalProps) {
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [query, workspaceFilter]);
+  }, [query, workspaceFilter, modalStatusFilter]);
 
   useEffect(() => {
-    if (selectedIndex > Math.max(results.length - 1, 0)) {
-      setSelectedIndex(Math.max(results.length - 1, 0));
+    if (selectedIndex > Math.max(modalResults.length - 1, 0)) {
+      setSelectedIndex(Math.max(modalResults.length - 1, 0));
     }
-  }, [results.length, selectedIndex]);
+  }, [modalResults.length, selectedIndex]);
 
   function handleKeyDown(event: React.KeyboardEvent) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setSelectedIndex((i) => Math.min(i + 1, results.length - 1));
+      setSelectedIndex((i) => Math.min(i + 1, modalResults.length - 1));
     }
     if (event.key === "ArrowUp") {
       event.preventDefault();
@@ -700,6 +736,10 @@ function DashboardModal(props: DashboardModalProps) {
       event.preventDefault();
       onClose?.();
     }
+    if (event.key === " " && document.activeElement !== inputRef.current) {
+      event.preventDefault();
+      if (selectedItem) modalToggleSelection(selectedItem.id);
+    }
   }
 
   useEffect(() => {
@@ -710,7 +750,7 @@ function DashboardModal(props: DashboardModalProps) {
     }
   }, [selectedIndex, selectedItem]);
 
-  const statusText = isLoading ? "加载中" : results.length === 0 ? (query ? "无结果" : "无书签") : `${results.length} 个书签`;
+  const statusText = isLoading ? "加载中" : modalResults.length === 0 ? (query ? "无结果" : "无书签") : `${modalResults.length} 个书签`;
 
   return (
     <div
@@ -726,6 +766,26 @@ function DashboardModal(props: DashboardModalProps) {
         <div className="flex h-14 flex-none items-center justify-between border-b border-outline-variant px-4">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-on-surface">书签管理</span>
+            <div className="flex items-center gap-1">
+              {(["all", "unread", "favorite"] as const).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setModalStatusFilter(key)}
+                  aria-current={modalStatusFilter === key ? "true" : undefined}
+                  className={[
+                    "rounded px-2 py-0.5 text-[11px] transition-colors",
+                    modalStatusFilter === key
+                      ? "bg-primary text-on-primary"
+                      : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container"
+                  ].join(" ")}
+                >
+                  {key === "all" && "全部"}
+                  {key === "unread" && "未读"}
+                  {key === "favorite" && "收藏"}
+                </button>
+              ))}
+            </div>
             <span className="rounded bg-surface-container-high px-1.5 py-0.5 text-[11px] text-on-surface-variant">{statusText}</span>
           </div>
           <button
@@ -763,7 +823,7 @@ function DashboardModal(props: DashboardModalProps) {
 
         {/* List */}
         <div ref={listRef} className="flex-1 overflow-y-auto p-2">
-          {results.map((item, index) => {
+          {modalResults.map((item, index) => {
             const isSelected = index === selectedIndex;
             return (
               <div
@@ -782,8 +842,20 @@ function DashboardModal(props: DashboardModalProps) {
                   }
                 }}
               >
+                {/* Checkbox */}
+                <input
+                  type="checkbox"
+                  checked={modalSelectedIds.has(item.id)}
+                  onChange={(e) => { e.stopPropagation(); modalToggleSelection(item.id); }}
+                  className="h-4 w-4 flex-none accent-primary"
+                  aria-label={`选择 ${item.title}`}
+                />
+
                 {/* Favicon */}
-                <div className="flex h-7 w-7 flex-none items-center justify-center rounded border border-outline-variant bg-surface-container">
+                <div className="relative flex h-7 w-7 flex-none items-center justify-center rounded border border-outline-variant bg-surface-container">
+                  {item.isUnread && (
+                    <span className="absolute -left-0.5 -top-0.5 z-10 h-2 w-2 rounded-full bg-primary" />
+                  )}
                   {item.favicon ? (
                     <img src={item.favicon} alt="" className="h-4 w-4" />
                   ) : (
@@ -839,30 +911,109 @@ function DashboardModal(props: DashboardModalProps) {
                   >
                     删除
                   </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); modalToggleFavorite(item.id, item.isFavorite); }}
+                    className={["rounded p-1 text-sm transition-colors", item.isFavorite ? "text-primary" : "text-on-surface-variant hover:text-primary"].join(" ")}
+                    title={item.isFavorite ? "取消收藏" : "收藏"}
+                    aria-pressed={item.isFavorite}
+                  >
+                    {item.isFavorite ? "★" : "☆"}
+                  </button>
                 </div>
               </div>
             );
           })}
 
-          {!isLoading && results.length === 0 && (
+          {!isLoading && modalResults.length === 0 && (
             <div className="px-4 py-12 text-center text-sm text-on-surface-variant">
               {query ? "未找到匹配的书签。" : "暂无书签。"}
             </div>
           )}
         </div>
 
-        {/* Footer hints */}
-        <div className="flex flex-none items-center gap-2 border-t border-outline-variant bg-surface-container-low px-4 py-2 text-xs text-outline">
-          <span>↑↓ 选择</span>
-          <span>·</span>
-          <span>Enter 打开</span>
-          <span>·</span>
-          <span>E 编辑</span>
-          <span>·</span>
-          <span>Delete 删除</span>
-          <span>·</span>
-          <span>Esc 关闭</span>
-        </div>
+        {/* Footer */}
+        {modalSelectedIds.size > 0 ? (
+          <div className="flex flex-none items-center gap-2 border-t border-outline-variant bg-surface-container px-4 py-2 text-xs">
+            <span className="text-on-surface-variant">已选 {modalSelectedIds.size} 项</span>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => {
+                const ids = [...modalSelectedIds];
+                if (confirm(`删除 ${ids.length} 项？`)) {
+                  void repository.bulkRemove(ids).then(() => {
+                    setBookmarks((prev) => prev.filter((i) => !ids.includes(i.id)));
+                    setModalSelectedIds(new Set());
+                  });
+                }
+              }}
+              className="text-error hover:underline"
+            >
+              删除
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => {
+                void repository.bulkUpdate([...modalSelectedIds], { isUnread: false }).then(() => {
+                  setBookmarks((prev) => prev.map((i) => modalSelectedIds.has(i.id) ? { ...i, isUnread: false } : i));
+                });
+              }}
+              className="text-on-surface hover:underline"
+            >
+              已读
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => {
+                void repository.bulkUpdate([...modalSelectedIds], { isUnread: true }).then(() => {
+                  setBookmarks((prev) => prev.map((i) => modalSelectedIds.has(i.id) ? { ...i, isUnread: true } : i));
+                });
+              }}
+              className="text-on-surface hover:underline"
+            >
+              未读
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => {
+                void repository.bulkUpdate([...modalSelectedIds], { isFavorite: true }).then(() => {
+                  setBookmarks((prev) => prev.map((i) => modalSelectedIds.has(i.id) ? { ...i, isFavorite: true } : i));
+                });
+              }}
+              className="text-on-surface hover:underline"
+            >
+              收藏
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => {
+                void repository.bulkUpdate([...modalSelectedIds], { isFavorite: false }).then(() => {
+                  setBookmarks((prev) => prev.map((i) => modalSelectedIds.has(i.id) ? { ...i, isFavorite: false } : i));
+                });
+              }}
+              className="text-on-surface hover:underline"
+            >
+              取消收藏
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-none items-center gap-2 border-t border-outline-variant bg-surface-container-low px-4 py-2 text-xs text-outline">
+            <span>↑↓ 选择</span>
+            <span>·</span>
+            <span>Enter 打开</span>
+            <span>·</span>
+            <span>E 编辑</span>
+            <span>·</span>
+            <span>Delete 删除</span>
+            <span>·</span>
+            <span>Esc 关闭</span>
+          </div>
+        )}
       </div>
 
       {/* Edit modal */}
