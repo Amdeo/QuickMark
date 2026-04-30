@@ -45,5 +45,30 @@ export function useBookmarks(query: string) {
     setBookmarks((items) => items.map((current) => (current.id === id ? item : current)));
   }, []);
 
-  return { bookmarks, results, isLoading, refresh, remove, markVisited };
+  const toggleFavorite = useCallback(async (id: string) => {
+    const item = bookmarks.find((i) => i.id === id);
+    if (!item) return;
+    const updated = await repository.update(id, { isFavorite: !item.isFavorite });
+    if (updated) {
+      setBookmarks((prev) => prev.map((current) => (current.id === id ? updated : current)));
+    }
+  }, [bookmarks]);
+
+  const toggleUnread = useCallback(async (id: string) => {
+    const item = bookmarks.find((i) => i.id === id);
+    if (!item) return;
+    const updated = await repository.update(id, { isUnread: !item.isUnread });
+    if (updated) {
+      setBookmarks((prev) => prev.map((current) => (current.id === id ? updated : current)));
+    }
+  }, [bookmarks]);
+
+  const markRead = useCallback(async (id: string) => {
+    const updated = await repository.update(id, { isUnread: false });
+    if (updated) {
+      setBookmarks((prev) => prev.map((current) => (current.id === id ? updated : current)));
+    }
+  }, []);
+
+  return { bookmarks, results, isLoading, refresh, remove, markVisited, toggleFavorite, toggleUnread, markRead };
 }
