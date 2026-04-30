@@ -13,6 +13,7 @@ export interface BookmarkRepository {
   list(): Promise<BookmarkItem[]>;
   saveCurrentTab(tab: TabSnapshot, options?: SaveOptions, now?: number): Promise<BookmarkItem>;
   update(id: string, patch: Partial<Omit<BookmarkItem, "id" | "createdAt" | "lastVisitedAt" | "visitCount">>, now?: number): Promise<BookmarkItem | undefined>;
+  bulkUpdate(ids: string[], patch: Partial<Omit<BookmarkItem, "id" | "createdAt" | "lastVisitedAt" | "visitCount">>, now?: number): Promise<void>;
   listByWorkspace(workspaceId: string | null): Promise<BookmarkItem[]>;
   markVisited(id: string, now?: number): Promise<BookmarkItem | undefined>;
   remove(id: string): Promise<void>;
@@ -28,7 +29,9 @@ export class ChromeBookmarkRepository implements BookmarkRepository {
       ...item,
       tags: item.tags ?? [],
       workspaceId: item.workspaceId ?? null,
-      notes: item.notes ?? ""
+      notes: item.notes ?? "",
+      isFavorite: item.isFavorite ?? false,
+      isUnread: item.isUnread ?? (item.visitCount === 0 ? true : false)
     }));
   }
 
@@ -90,6 +93,20 @@ export class ChromeBookmarkRepository implements BookmarkRepository {
   async remove(id: string): Promise<void> {
     const items = await this.list();
     await this.write(items.filter((item) => item.id !== id));
+  }
+
+  async bulkUpdate(
+    ids: string[],
+    patch: Partial<Omit<BookmarkItem, "id" | "createdAt" | "lastVisitedAt" | "visitCount">>,
+    now = Date.now()
+  ): Promise<void> {
+    const items = await this.list();
+    const idSet = new Set(ids);
+    const updated = items.map((item) => {
+      if (!idSet.has(item.id)) return item;
+      return { ...item, ...patch, updatedAt: now };
+    });
+    await this.write(updated);
   }
 
   private write(items: BookmarkItem[]): Promise<void> {

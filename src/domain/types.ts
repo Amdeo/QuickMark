@@ -11,6 +11,8 @@ export type BookmarkItem = {
   tags: string[];
   workspaceId: string | null;
   notes: string;
+  isFavorite: boolean;
+  isUnread: boolean;
 };
 
 export type Workspace = {

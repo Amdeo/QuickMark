@@ -18,7 +18,9 @@ export function bookmarkFromTab(tab: TabSnapshot, now = Date.now()): BookmarkIte
     visitCount: 1,
     tags: [],
     workspaceId: null,
-    notes: ""
+    notes: "",
+    isFavorite: false,
+    isUnread: true
   };
 }
 
@@ -26,7 +28,7 @@ export function touchBookmark(
   item: BookmarkItem,
   now = Date.now(),
   patch: Partial<
-    Pick<BookmarkItem, "title" | "domain" | "favicon" | "url" | "tags" | "workspaceId" | "notes">
+    Pick<BookmarkItem, "title" | "domain" | "favicon" | "url" | "tags" | "workspaceId" | "notes" | "isFavorite" | "isUnread">
   > = {}
 ): BookmarkItem {
   return {

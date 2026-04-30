@@ -196,4 +196,63 @@ describe("ChromeBookmarkRepository", () => {
       notes: ""
     });
   });
+
+  it("migrates old bookmarks without isFavorite/isUnread", async () => {
+    const storage = createMemoryStorageArea({
+      "quickmark.bookmarks": [
+        {
+          id: "https://old-unread.com",
+          title: "Old Unread",
+          url: "https://old-unread.com",
+          domain: "old-unread.com",
+          createdAt: 100,
+          updatedAt: 100,
+          visitCount: 0
+        },
+        {
+          id: "https://old-read.com",
+          title: "Old Read",
+          url: "https://old-read.com",
+          domain: "old-read.com",
+          createdAt: 100,
+          updatedAt: 100,
+          visitCount: 3
+        }
+      ]
+    });
+    const repository = new ChromeBookmarkRepository(storage);
+
+    const items = await repository.list();
+    expect(items[0]).toMatchObject({ isFavorite: false, isUnread: true });
+    expect(items[1]).toMatchObject({ isFavorite: false, isUnread: false });
+  });
+
+  it("saves a new bookmark with isUnread=true and isFavorite=false by default", async () => {
+    const storage = createMemoryStorageArea();
+    const repository = new ChromeBookmarkRepository(storage);
+
+    const item = await repository.saveCurrentTab(
+      { title: "Example", url: "https://example.com" },
+      {},
+      1000
+    );
+
+    expect(item).toMatchObject({ isFavorite: false, isUnread: true });
+  });
+
+  it("bulk updates multiple bookmarks", async () => {
+    const storage = createMemoryStorageArea();
+    const repository = new ChromeBookmarkRepository(storage);
+
+    const a = await repository.saveCurrentTab({ title: "A", url: "https://a.com" }, {}, 1000);
+    const b = await repository.saveCurrentTab({ title: "B", url: "https://b.com" }, {}, 1000);
+    const c = await repository.saveCurrentTab({ title: "C", url: "https://c.com" }, {}, 1000);
+
+    await repository.bulkUpdate([a.id, b.id], { workspaceId: "ws-1" }, 2000);
+
+    const items = await repository.list();
+    expect(items.find((i) => i.id === a.id)?.workspaceId).toBe("ws-1");
+    expect(items.find((i) => i.id === b.id)?.workspaceId).toBe("ws-1");
+    expect(items.find((i) => i.id === c.id)?.workspaceId).toBeNull();
+  });
 });
