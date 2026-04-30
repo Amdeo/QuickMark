@@ -34,6 +34,8 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
   const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "favorite">("all");
   const [isLoading, setIsLoading] = useState(true);
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editUrl, setEditUrl] = useState("");
@@ -91,6 +93,14 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
     return filtered;
   }, [bookmarks, query, workspaces, workspaceFilter, statusFilter]);
 
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const resultIds = new Set(results.map((r) => r.id));
+      const next = new Set([...prev].filter((id) => resultIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [results]);
+
   const stats = useMemo(() => {
     const total = bookmarks.length;
     const oneWeekAgo = Date.now() - 7 * 86400000;
@@ -142,6 +152,25 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
     }
     cancelEdit();
   }
+
+  function toggleSelection(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(results.map((r) => r.id)));
+  }
+
+  function deselectAll() {
+    setSelectedIds(new Set());
+  }
+
+  const allSelected = results.length > 0 && results.every((r) => selectedIds.has(r.id));
 
   async function handleRemove(id: string) {
     if (!confirm("确定删除此书签？")) {
@@ -246,6 +275,15 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-outline-variant text-xs text-on-surface-variant">
+              <th className="px-2 py-3">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={() => (allSelected ? deselectAll() : selectAll())}
+                  className="h-4 w-4 accent-primary"
+                  aria-label="全选"
+                />
+              </th>
               <th className="px-4 py-3 font-medium">书签</th>
               <th className="px-4 py-3 font-medium">工作区</th>
               <th className="px-4 py-3 font-medium">标签</th>
@@ -257,6 +295,15 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
           <tbody>
             {results.map((item) => (
               <tr key={item.id} className="border-b border-outline-variant/50 transition-colors hover:bg-surface-container-high">
+                <td className="px-2 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => toggleSelection(item.id)}
+                    className="h-4 w-4 accent-primary"
+                    aria-label={`选择 ${item.title}`}
+                  />
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="relative flex h-6 w-6 flex-none items-center justify-center rounded border border-outline-variant bg-surface-container">
@@ -339,6 +386,89 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
         {!isLoading && results.length === 0 && (
           <div className="px-4 py-12 text-center text-sm text-on-surface-variant">
             {query ? "未找到匹配的书签。" : "暂无书签。"}
+          </div>
+        )}
+
+        {selectedIds.size > 0 && (
+          <div className="sticky bottom-0 flex items-center gap-3 border-t border-outline-variant bg-surface-container px-4 py-2 text-sm">
+            <span className="text-on-surface-variant">已选 {selectedIds.size} 项</span>
+            <div className="h-4 w-px bg-outline-variant" />
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`确定删除选中的 ${selectedIds.size} 个书签？`)) {
+                  void repository.bulkRemove([...selectedIds]).then(() => {
+                    setBookmarks((prev) => prev.filter((item) => !selectedIds.has(item.id)));
+                    setSelectedIds(new Set());
+                  });
+                }
+              }}
+              className="rounded px-2 py-1 text-error transition-colors hover:bg-error/10"
+            >
+              删除
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void repository.bulkUpdate([...selectedIds], { isUnread: false }).then(() => {
+                  setBookmarks((prev) => prev.map((item) => selectedIds.has(item.id) ? { ...item, isUnread: false } : item));
+                });
+              }}
+              className="rounded px-2 py-1 text-on-surface transition-colors hover:bg-surface-container-high"
+            >
+              标记已读
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void repository.bulkUpdate([...selectedIds], { isUnread: true }).then(() => {
+                  setBookmarks((prev) => prev.map((item) => selectedIds.has(item.id) ? { ...item, isUnread: true } : item));
+                });
+              }}
+              className="rounded px-2 py-1 text-on-surface transition-colors hover:bg-surface-container-high"
+            >
+              标记未读
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void repository.bulkUpdate([...selectedIds], { isFavorite: true }).then(() => {
+                  setBookmarks((prev) => prev.map((item) => selectedIds.has(item.id) ? { ...item, isFavorite: true } : item));
+                });
+              }}
+              className="rounded px-2 py-1 text-on-surface transition-colors hover:bg-surface-container-high"
+            >
+              收藏
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void repository.bulkUpdate([...selectedIds], { isFavorite: false }).then(() => {
+                  setBookmarks((prev) => prev.map((item) => selectedIds.has(item.id) ? { ...item, isFavorite: false } : item));
+                });
+              }}
+              className="rounded px-2 py-1 text-on-surface transition-colors hover:bg-surface-container-high"
+            >
+              取消收藏
+            </button>
+            <select
+              value=""
+              onChange={(e) => {
+                const wsId = e.target.value === "__null__" ? null : e.target.value || null;
+                if (wsId === "") return;
+                void repository.bulkUpdate([...selectedIds], { workspaceId: wsId }).then(() => {
+                  setBookmarks((prev) => prev.map((item) => selectedIds.has(item.id) ? { ...item, workspaceId: wsId } : item));
+                });
+                e.target.value = "";
+              }}
+              className="rounded border border-outline-variant bg-surface px-2 py-1 text-xs text-on-surface outline-none"
+            >
+              <option value="">移动工作区...</option>
+              <option value="__null__">未分组</option>
+              {workspaces.map((ws) => (
+                <option key={ws.id} value={ws.id}>{ws.name}</option>
+              ))}
+            </select>
           </div>
         )}
       </div>

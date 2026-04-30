@@ -260,4 +260,19 @@ describe("ChromeBookmarkRepository", () => {
     expect(items.find((i) => i.id === b.id)?.updatedAt).toBe(2000);
     expect(items.find((i) => i.id === c.id)?.updatedAt).toBe(1000);
   });
+
+  it("bulk removes multiple bookmarks", async () => {
+    const storage = createMemoryStorageArea();
+    const repository = new ChromeBookmarkRepository(storage);
+
+    const a = await repository.saveCurrentTab({ title: "A", url: "https://a.com" }, {}, 1000);
+    const b = await repository.saveCurrentTab({ title: "B", url: "https://b.com" }, {}, 1000);
+    const c = await repository.saveCurrentTab({ title: "C", url: "https://c.com" }, {}, 1000);
+
+    await repository.bulkRemove([a.id, b.id]);
+
+    const items = await repository.list();
+    expect(items.length).toBe(1);
+    expect(items[0].id).toBe(c.id);
+  });
 });

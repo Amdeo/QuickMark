@@ -17,6 +17,7 @@ export interface BookmarkRepository {
   listByWorkspace(workspaceId: string | null): Promise<BookmarkItem[]>;
   markVisited(id: string, now?: number): Promise<BookmarkItem | undefined>;
   remove(id: string): Promise<void>;
+  bulkRemove(ids: string[]): Promise<void>;
 }
 
 export class ChromeBookmarkRepository implements BookmarkRepository {
@@ -110,6 +111,12 @@ export class ChromeBookmarkRepository implements BookmarkRepository {
       return { ...item, ...patch, updatedAt: now };
     });
     await this.write(updated);
+  }
+
+  async bulkRemove(ids: string[]): Promise<void> {
+    const items = await this.list();
+    const idSet = new Set(ids);
+    await this.write(items.filter((item) => !idSet.has(item.id)));
   }
 
   private write(items: BookmarkItem[]): Promise<void> {
