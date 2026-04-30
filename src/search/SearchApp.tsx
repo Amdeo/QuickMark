@@ -14,7 +14,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { results, isLoading, remove, markVisited } = useBookmarks(query);
+  const { results, isLoading, remove, markVisited, markRead, toggleFavorite, toggleUnread } = useBookmarks(query);
   const selected = results[selectedIndex];
 
   useEffect(() => {
@@ -47,6 +47,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
     }
 
     await markVisited(selected.id);
+    await markRead(selected.id);
     await openBookmark(selected, newTab);
     onClose?.();
   }
@@ -121,6 +122,8 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
               isSelected={index === selectedIndex}
               onMouseEnter={() => setSelectedIndex(index)}
               onOpen={(newTab) => void openSelected(newTab)}
+              onToggleFavorite={() => void toggleFavorite(item.id)}
+              onToggleUnread={() => void toggleUnread(item.id)}
             />
           ))}
 
@@ -155,16 +158,19 @@ function BookmarkRow({
   item,
   isSelected,
   onMouseEnter,
-  onOpen
+  onOpen,
+  onToggleFavorite,
+  onToggleUnread,
 }: {
   item: BookmarkItem;
   isSelected: boolean;
   onMouseEnter: () => void;
   onOpen: (newTab: boolean) => void;
+  onToggleFavorite: () => void;
+  onToggleUnread: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <div
       onMouseEnter={onMouseEnter}
       onClick={(event) => onOpen(event.metaKey || event.ctrlKey)}
       className={[
@@ -174,7 +180,14 @@ function BookmarkRow({
           : "border-transparent hover:bg-surface-container-high"
       ].join(" ")}
     >
-      <div className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded border border-outline-variant bg-surface-container">
+      <div className="relative mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded border border-outline-variant bg-surface-container">
+        {item.isUnread && (
+          <span
+            onClick={(e) => { e.stopPropagation(); onToggleUnread(); }}
+            className="absolute -left-0.5 -top-0.5 h-2 w-2 cursor-pointer rounded-full bg-primary"
+            aria-label="未读，点击标记为已读"
+          />
+        )}
         {item.favicon ? (
           <img src={item.favicon} alt="" className="h-4 w-4" />
         ) : (
@@ -194,7 +207,17 @@ function BookmarkRow({
           <span className="flex-none">{item.visitCount} 次访问</span>
         </div>
       </div>
-    </button>
+
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+        className={["flex-none text-sm transition-colors", item.isFavorite ? "text-primary" : "text-outline hover:text-primary"].join(" ")}
+        title={item.isFavorite ? "取消收藏" : "收藏"}
+        aria-pressed={item.isFavorite}
+      >
+        {item.isFavorite ? "★" : "☆"}
+      </button>
+    </div>
   );
 }
 

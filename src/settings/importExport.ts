@@ -79,7 +79,9 @@ export async function importFromHtml(file: File): Promise<ImportResult> {
       visitCount: 0,
       tags: [],
       workspaceId: null,
-      notes: ""
+      notes: "",
+      isFavorite: false,
+      isUnread: false
     });
   }
 

@@ -14,7 +14,9 @@ const items: BookmarkItem[] = [
     visitCount: 2,
     tags: ["frontend", "docs"],
     workspaceId: "ws1",
-    notes: ""
+    notes: "",
+    isFavorite: false,
+    isUnread: false
   },
   {
     id: "b",
@@ -27,7 +29,9 @@ const items: BookmarkItem[] = [
     visitCount: 1,
     tags: ["frontend", "routing"],
     workspaceId: "ws2",
-    notes: ""
+    notes: "",
+    isFavorite: false,
+    isUnread: false
   },
   {
     id: "c",
@@ -40,7 +44,9 @@ const items: BookmarkItem[] = [
     visitCount: 9,
     tags: ["backend", "docs"],
     workspaceId: null,
-    notes: ""
+    notes: "",
+    isFavorite: false,
+    isUnread: false
   }
 ];
 
