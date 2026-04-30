@@ -47,7 +47,6 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
     }
 
     await markVisited(selected.id);
-    await markRead(selected.id);
     await openBookmark(selected, newTab);
     onClose?.();
   }
@@ -184,7 +183,7 @@ function BookmarkRow({
         {item.isUnread && (
           <span
             onClick={(e) => { e.stopPropagation(); onToggleUnread(); }}
-            className="absolute -left-0.5 -top-0.5 h-2 w-2 cursor-pointer rounded-full bg-primary"
+            className="absolute -left-0.5 -top-0.5 z-10 h-2 w-2 cursor-pointer rounded-full bg-primary"
             aria-label="未读，点击标记为已读"
           />
         )}

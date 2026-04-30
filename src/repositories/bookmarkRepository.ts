@@ -88,6 +88,7 @@ export class ChromeBookmarkRepository implements BookmarkRepository {
     }
 
     const saved = touchBookmark(existing, now);
+    saved.isUnread = false;
     await this.write(upsert(items, saved));
     return saved;
   }

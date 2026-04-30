@@ -31,6 +31,7 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [query, setQuery] = useState("");
   const [workspaceFilter, setWorkspaceFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "favorite">("all");
   const [isLoading, setIsLoading] = useState(true);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,9 +78,18 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
 
   const results = useMemo(() => {
     const searched = searchBookmarks(bookmarks, query, workspaces);
-    if (workspaceFilter === "all") return searched;
-    return searched.filter((item) => item.workspaceId === workspaceFilter);
-  }, [bookmarks, query, workspaces, workspaceFilter]);
+    let filtered = searched;
+    if (workspaceFilter !== "all") {
+      filtered = filtered.filter((item) => item.workspaceId === workspaceFilter);
+    }
+    if (statusFilter === "unread") {
+      filtered = filtered.filter((item) => item.isUnread);
+    }
+    if (statusFilter === "favorite") {
+      filtered = filtered.filter((item) => item.isFavorite);
+    }
+    return filtered;
+  }, [bookmarks, query, workspaces, workspaceFilter, statusFilter]);
 
   const stats = useMemo(() => {
     const total = bookmarks.length;
@@ -141,6 +151,24 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
     setBookmarks((items) => items.filter((item) => item.id !== id));
   }
 
+  async function toggleFavorite(id: string) {
+    const item = bookmarks.find((i) => i.id === id);
+    if (!item) return;
+    const updated = await repository.update(id, { isFavorite: !item.isFavorite });
+    if (updated) {
+      setBookmarks((prev) => prev.map((current) => (current.id === id ? updated : current)));
+    }
+  }
+
+  async function toggleUnread(id: string) {
+    const item = bookmarks.find((i) => i.id === id);
+    if (!item) return;
+    const updated = await repository.update(id, { isUnread: !item.isUnread });
+    if (updated) {
+      setBookmarks((prev) => prev.map((current) => (current.id === id ? updated : current)));
+    }
+  }
+
   function handleEditKeyDown(event: React.KeyboardEvent) {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -192,6 +220,26 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
             <option key={ws.id} value={ws.id}>{ws.name}</option>
           ))}
         </select>
+        <div className="flex gap-1">
+          {(["all", "unread", "favorite"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setStatusFilter(key)}
+              aria-current={statusFilter === key ? "true" : undefined}
+              className={[
+                "rounded-lg px-3 py-2 text-sm transition-colors",
+                statusFilter === key
+                  ? "bg-primary text-on-primary"
+                  : "border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high"
+              ].join(" ")}
+            >
+              {key === "all" && "全部"}
+              {key === "unread" && "未读"}
+              {key === "favorite" && "收藏"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-outline-variant">
@@ -211,7 +259,10 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
               <tr key={item.id} className="border-b border-outline-variant/50 transition-colors hover:bg-surface-container-high">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-6 w-6 flex-none items-center justify-center rounded border border-outline-variant bg-surface-container">
+                    <div className="relative flex h-6 w-6 flex-none items-center justify-center rounded border border-outline-variant bg-surface-container">
+                      {item.isUnread && (
+                        <span className="absolute -left-0.5 -top-0.5 z-10 h-2 w-2 rounded-full bg-primary" />
+                      )}
                       {item.favicon ? (
                         <img src={item.favicon} alt="" className="h-4 w-4" />
                       ) : (
@@ -253,6 +304,15 @@ export function DashboardApp({ mode = "page", onClose }: DashboardAppProps) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); void toggleFavorite(item.id); }}
+                      className={["rounded p-1 text-sm transition-colors", item.isFavorite ? "text-primary" : "text-on-surface-variant hover:text-primary"].join(" ")}
+                      title={item.isFavorite ? "取消收藏" : "收藏"}
+                      aria-pressed={item.isFavorite}
+                    >
+                      {item.isFavorite ? "★" : "☆"}
+                    </button>
                     <button
                       type="button"
                       onClick={() => startEdit(item)}
