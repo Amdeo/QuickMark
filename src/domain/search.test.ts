@@ -1,101 +1,83 @@
-import { describe, expect, it } from "vitest";
-import type { BookmarkItem, Workspace } from "./types";
-import { searchBookmarks } from "./search";
+import { createBookmarkSearchIndex, filterBySource, searchBookmarks } from "./search";
+import type { BookmarkItem } from "./types";
 
 const items: BookmarkItem[] = [
-  {
-    id: "a",
-    title: "React Documentation",
-    url: "https://react.dev/reference/react",
-    domain: "react.dev",
-    createdAt: 1,
-    updatedAt: 100,
-    lastVisitedAt: 100,
-    visitCount: 2,
-    tags: ["frontend", "docs"],
-    workspaceId: "ws1",
-    notes: "",
-    isFavorite: false,
-    isUnread: false
-  },
-  {
-    id: "b",
-    title: "React Router Guide",
-    url: "https://reactrouter.com/start",
-    domain: "reactrouter.com",
-    createdAt: 1,
-    updatedAt: 300,
-    lastVisitedAt: 300,
-    visitCount: 1,
-    tags: ["frontend", "routing"],
-    workspaceId: "ws2",
-    notes: "",
-    isFavorite: false,
-    isUnread: false
-  },
-  {
-    id: "c",
-    title: "TypeScript Handbook",
-    url: "https://www.typescriptlang.org/docs/",
-    domain: "typescriptlang.org",
-    createdAt: 1,
-    updatedAt: 200,
-    lastVisitedAt: 200,
-    visitCount: 9,
-    tags: ["backend", "docs"],
-    workspaceId: null,
-    notes: "",
-    isFavorite: false,
-    isUnread: false
-  }
+  { id: "b1", title: "React Docs", url: "https://react.dev", domain: "react.dev", visitCount: 5, source: "bookmark" },
+  { id: "b2", title: "Vue Guide", url: "https://vuejs.org", domain: "vuejs.org", visitCount: 3, source: "bookmark" },
+  { id: "h1", title: "GitHub", url: "https://github.com", domain: "github.com", visitCount: 10, source: "history" },
+  { id: "h2", title: "Stack Overflow", url: "https://stackoverflow.com", domain: "stackoverflow.com", visitCount: 8, source: "history" },
 ];
 
-const workspaces: Workspace[] = [
-  { id: "ws1", name: "Personal", createdAt: 1, updatedAt: 1 },
-  { id: "ws2", name: "Work", createdAt: 1, updatedAt: 1 }
-];
+const fuse = createBookmarkSearchIndex(items);
+
+describe("filterBySource", () => {
+  test("returns all items when filter is 'all'", () => {
+    expect(filterBySource(items, "all")).toEqual(items);
+  });
+
+  test("returns only bookmarks when filter is 'bookmark'", () => {
+    const result = filterBySource(items, "bookmark");
+    expect(result).toHaveLength(2);
+    expect(result.every((i) => i.source === "bookmark")).toBe(true);
+  });
+
+  test("returns only history when filter is 'history'", () => {
+    const result = filterBySource(items, "history");
+    expect(result).toHaveLength(2);
+    expect(result.every((i) => i.source === "history")).toBe(true);
+  });
+});
 
 describe("searchBookmarks", () => {
-  it("returns recent bookmarks first when query is empty", () => {
-    expect(searchBookmarks(items, "").map((item) => item.id)).toEqual(["b", "c", "a"]);
+  test("empty query returns sorted items for 'all'", () => {
+    const result = searchBookmarks(items, "", fuse, "all");
+    expect(result).toHaveLength(4);
   });
 
-  it("searches by title, url, and domain", () => {
-    expect(searchBookmarks(items, "typescript").map((item) => item.id)).toEqual(["c"]);
-    expect(searchBookmarks(items, "reactrouter").map((item) => item.id)).toEqual(["b"]);
+  test("empty query returns only bookmarks when filtered", () => {
+    const result = searchBookmarks(items, "", fuse, "bookmark");
+    expect(result).toHaveLength(2);
+    expect(result.every((i) => i.source === "bookmark")).toBe(true);
   });
 
-  it("uses visit count as a tie breaker after recency", () => {
-    const sameRecency = items.map((item) => ({ ...item, lastVisitedAt: 100 }));
-
-    expect(searchBookmarks(sameRecency, "").map((item) => item.id)).toEqual(["c", "a", "b"]);
+  test("empty query returns only history when filtered", () => {
+    const result = searchBookmarks(items, "", fuse, "history");
+    expect(result).toHaveLength(2);
+    expect(result.every((i) => i.source === "history")).toBe(true);
   });
 
-  it("filters by tag with # syntax", () => {
-    expect(searchBookmarks(items, "#docs").map((item) => item.id)).toEqual(["c", "a"]);
-    expect(searchBookmarks(items, "#frontend").map((item) => item.id)).toEqual(["b", "a"]);
+  test("search filters by source before matching", () => {
+    const result = searchBookmarks(items, "github", fuse, "bookmark");
+    expect(result).toHaveLength(0);
   });
 
-  it("filters by multiple tags", () => {
-    expect(searchBookmarks(items, "#docs #frontend").map((item) => item.id)).toEqual(["a"]);
+  test("search finds history items when filtered to history", () => {
+    const result = searchBookmarks(items, "github", fuse, "history");
+    expect(result).toHaveLength(1);
+    expect(result[0].source).toBe("history");
   });
 
-  it("filters by workspace with @ syntax", () => {
-    expect(searchBookmarks(items, "@personal", workspaces).map((item) => item.id)).toEqual(["a"]);
-    expect(searchBookmarks(items, "@work", workspaces).map((item) => item.id)).toEqual(["b"]);
+  test("default filter is 'all'", () => {
+    const result = searchBookmarks(items, "");
+    expect(result).toHaveLength(4);
   });
 
-  it("combines text search with tag and workspace filters", () => {
-    expect(searchBookmarks(items, "react @personal", workspaces).map((item) => item.id)).toEqual(["a"]);
-    expect(searchBookmarks(items, "react #routing", workspaces).map((item) => item.id)).toEqual(["b"]);
+  test("history filter sorts by lastVisitedAt descending", () => {
+    const historyItems: BookmarkItem[] = [
+      { id: "h1", title: "Old Site", url: "https://old.com", domain: "old.com", visitCount: 1, source: "history", lastVisitedAt: 1000 },
+      { id: "h2", title: "New Site", url: "https://new.com", domain: "new.com", visitCount: 1, source: "history", lastVisitedAt: 5000 },
+      { id: "h3", title: "Mid Site", url: "https://mid.com", domain: "mid.com", visitCount: 1, source: "history", lastVisitedAt: 3000 },
+    ];
+    const result = searchBookmarks(historyItems, "", createBookmarkSearchIndex(historyItems), "history");
+    expect(result.map((i) => i.id)).toEqual(["h2", "h3", "h1"]);
   });
 
-  it("ignores @workspace filter when workspaces list is not provided", () => {
-    expect(searchBookmarks(items, "@personal").map((item) => item.id)).toEqual(["b", "c", "a"]);
-  });
-
-  it("returns empty result when no matches", () => {
-    expect(searchBookmarks(items, "#nonexistent")).toEqual([]);
-    expect(searchBookmarks(items, "@nonexistent", workspaces)).toEqual([]);
+  test("history search tie-breaks by lastVisitedAt descending", () => {
+    const historyItems: BookmarkItem[] = [
+      { id: "h1", title: "GitHub", url: "https://github.com", domain: "github.com", visitCount: 1, source: "history", lastVisitedAt: 1000 },
+      { id: "h2", title: "GitHub", url: "https://github.com", domain: "github.com", visitCount: 5, source: "history", lastVisitedAt: 5000 },
+    ];
+    const result = searchBookmarks(historyItems, "github", createBookmarkSearchIndex(historyItems), "history");
+    expect(result[0].id).toBe("h2");
   });
 });

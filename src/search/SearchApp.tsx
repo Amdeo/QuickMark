@@ -1,8 +1,104 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { BookmarkItem } from "../domain/types";
+import { Icon } from "../components/Icon";
+import { getExtensionFaviconUrl } from "../adapters/favicon";
 import { useBookmarks } from "./useBookmarks";
+import { getDisplayFolderPath, getNextVisibleResultCount, isNearScrollBottom, splitQueryMatch } from "./display";
+import type { SourceFilter } from "../domain/search";
 
 const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+const HISTORY_KEY = "quickmark-search-history";
+const THEME_KEY = "quickmark-theme";
+const MAX_HISTORY = 5;
+const RESULT_PAGE_SIZE = 50;
+
+type ThemePreference = "light" | "dark" | "system";
+
+function getThemePreference(): ThemePreference {
+  try {
+    const raw = localStorage.getItem(THEME_KEY);
+    if (raw === "light" || raw === "dark" || raw === "system") return raw;
+  } catch { /* ignore */ }
+  return "system";
+}
+
+function saveThemePreference(theme: ThemePreference) {
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+function getEffectiveTheme(preference: ThemePreference): "light" | "dark" {
+  if (preference !== "system") return preference;
+  if (typeof window === "undefined" || !window.matchMedia) return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+type ClipboardLike = {
+  writeText: (text: string) => Promise<void>;
+};
+
+let memorySearchHistory: string[] | undefined;
+let historyLoadingPromise: Promise<void> | undefined;
+
+async function ensureSearchHistoryLoaded(): Promise<void> {
+  if (memorySearchHistory !== undefined) return;
+  if (historyLoadingPromise) {
+    await historyLoadingPromise;
+    return;
+  }
+  historyLoadingPromise = (async () => {
+    try {
+      const result = await chrome.storage.local.get(HISTORY_KEY);
+      const raw = result[HISTORY_KEY];
+      memorySearchHistory = Array.isArray(raw) ? raw : [];
+    } catch {
+      memorySearchHistory = [];
+    }
+  })();
+  await historyLoadingPromise;
+}
+
+function getSearchHistory(): string[] {
+  return memorySearchHistory ?? [];
+}
+
+async function saveSearchHistory(history: string[]): Promise<void> {
+  await ensureSearchHistoryLoaded();
+  memorySearchHistory = history.slice(0, MAX_HISTORY);
+  try {
+    await chrome.storage.local.set({ [HISTORY_KEY]: memorySearchHistory });
+  } catch {
+    /* ignore */
+  }
+}
+
+async function addSearchHistory(query: string): Promise<void> {
+  const q = query.trim();
+  if (!q) return;
+  await ensureSearchHistoryLoaded();
+  const history = getSearchHistory().filter((h) => h !== q);
+  history.unshift(q);
+  await saveSearchHistory(history);
+}
+
+export async function copyUrlToClipboard(
+  url: string,
+  clipboard: ClipboardLike | undefined = navigator.clipboard
+): Promise<void> {
+  if (clipboard) {
+    await clipboard.writeText(url);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = url;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+}
 
 type SearchAppProps = {
   mode?: "page" | "modal";
@@ -10,12 +106,17 @@ type SearchAppProps = {
   openBookmark?: (item: BookmarkItem, newTab: boolean) => Promise<void>;
 };
 
-export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkInExtensionPage }: SearchAppProps) {
+export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkDefault }: SearchAppProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [visibleResultCount, setVisibleResultCount] = useState(RESULT_PAGE_SIZE);
+  const [themePref, setThemePref] = useState<ThemePreference>(getThemePreference);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const inputRef = useRef<HTMLInputElement>(null);
-  const { results, isLoading, remove, markVisited, markRead, toggleFavorite, toggleUnread } = useBookmarks(query);
+  const { results, isLoading, error, folderPaths, refresh, markVisited } = useBookmarks(query, sourceFilter);
   const selected = results[selectedIndex];
+
+  const effectiveTheme = getEffectiveTheme(themePref);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -23,7 +124,8 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [query]);
+    setVisibleResultCount(RESULT_PAGE_SIZE);
+  }, [query, sourceFilter]);
 
   useEffect(() => {
     if (selectedIndex > Math.max(results.length - 1, 0)) {
@@ -31,36 +133,110 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
     }
   }, [results.length, selectedIndex]);
 
+  useEffect(() => {
+    setVisibleResultCount((count) => Math.min(Math.max(count, RESULT_PAGE_SIZE), results.length || RESULT_PAGE_SIZE));
+  }, [results.length]);
+
+  useEffect(() => {
+    if (selectedIndex >= visibleResultCount - 1) {
+      setVisibleResultCount((count) =>
+        Math.max(count, getNextVisibleResultCount(selectedIndex, results.length, RESULT_PAGE_SIZE))
+      );
+    }
+  }, [results.length, selectedIndex, visibleResultCount]);
+
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+
+  useEffect(() => {
+    ensureSearchHistoryLoaded().then(() => setSearchHistory(getSearchHistory()));
+  }, []);
+
+  const { bookmarkCount, historyCount } = useMemo(() => {
+    let b = 0;
+    let h = 0;
+    for (const r of results) {
+      if (r.source === "history") h++;
+      else b++;
+    }
+    return { bookmarkCount: b, historyCount: h };
+  }, [results]);
+
   const statusText = useMemo(() => {
-    if (isLoading) {
-      return "加载中";
-    }
+    if (isLoading) return "加载中";
+    if (error) return "加载失败";
     if (!results.length) {
-      return query ? "无结果" : "无书签";
+      if (query) return "无结果";
+      if (sourceFilter === "bookmark") return "无书签";
+      if (sourceFilter === "history") return "无历史记录";
+      return "无书签";
     }
-    return query ? "搜索结果" : "最近书签";
-  }, [isLoading, query, results.length]);
+    if (sourceFilter === "bookmark") return `书签 ${results.length}`;
+    if (sourceFilter === "history") return `历史 ${results.length}`;
+    const parts: string[] = [];
+    if (bookmarkCount > 0) parts.push(`书签 ${bookmarkCount}`);
+    if (historyCount > 0) parts.push(`历史 ${historyCount}`);
+    return parts.join(" · ");
+  }, [isLoading, error, query, results.length, bookmarkCount, historyCount, sourceFilter]);
+
+  const visibleResults = useMemo(
+    () => results.slice(0, visibleResultCount),
+    [results, visibleResultCount]
+  );
 
   async function openSelected(newTab: boolean) {
     if (!selected) {
+      if (query.trim()) {
+        await openWebSearch(query.trim());
+      }
       return;
     }
-
+    if (query.trim()) {
+      await addSearchHistory(query);
+      setSearchHistory(getSearchHistory());
+    }
     await markVisited(selected.id);
     await openBookmark(selected, newTab);
     onClose?.();
   }
 
-  async function deleteSelected() {
-    if (!selected) {
-      return;
-    }
-
-    await remove(selected.id);
+  async function openWebSearch(rawQuery: string): Promise<void> {
+    const url = `https://www.google.com/search?q=${encodeURIComponent(rawQuery)}`;
+    await addSearchHistory(rawQuery);
+    setSearchHistory(getSearchHistory());
+    await openBookmark(
+      {
+        id: "quickmark-web-search",
+        title: rawQuery,
+        url,
+        domain: "google.com",
+        favicon: "",
+        visitCount: 0,
+        source: "history",
+      },
+      true
+    );
+    onClose?.();
   }
+
+  useEffect(() => {
+    function onEscapeCapture(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (query) {
+        setQuery("");
+      } else {
+        onClose?.();
+      }
+    }
+    document.addEventListener("keydown", onEscapeCapture, true);
+    return () => document.removeEventListener("keydown", onEscapeCapture, true);
+  }, [query, onClose]);
 
   return (
     <main
+      data-theme={effectiveTheme}
       className={["text-on-surface", mode === "modal" ? "w-full" : "min-h-screen bg-surface"].join(" ")}
       onKeyDown={(event) => {
         if (event.key === "ArrowDown") {
@@ -71,173 +247,529 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkI
           event.preventDefault();
           setSelectedIndex((index) => Math.max(index - 1, 0));
         }
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          const filters = ["all", "bookmark", "history"] as SourceFilter[];
+          const idx = filters.indexOf(sourceFilter);
+          setSourceFilter(filters[(idx - 1 + filters.length) % filters.length]);
+        }
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          const filters = ["all", "bookmark", "history"] as SourceFilter[];
+          const idx = filters.indexOf(sourceFilter);
+          setSourceFilter(filters[(idx + 1) % filters.length]);
+        }
         if (event.key === "Enter") {
           event.preventDefault();
           void openSelected(event.metaKey || event.ctrlKey);
         }
-        if (event.key === "Backspace" && (event.metaKey || event.ctrlKey)) {
+        if (/^[1-9]$/.test(event.key) && (event.metaKey || event.ctrlKey)) {
           event.preventDefault();
-          void deleteSelected();
+          const index = parseInt(event.key, 10) - 1;
+          if (results[index]) {
+            void markVisited(results[index].id);
+            void openBookmark(results[index], false);
+            onClose?.();
+          }
         }
-        if (event.key === "Delete") {
+        if ((event.key === "c" || event.key === "C") && (event.metaKey || event.ctrlKey)) {
+          if (!selected) return;
+          const active = document.activeElement as HTMLInputElement | null;
+          const hasInputSelection =
+            active instanceof HTMLInputElement &&
+            typeof active.selectionStart === "number" &&
+            typeof active.selectionEnd === "number" &&
+            active.selectionStart !== active.selectionEnd;
+          if (hasInputSelection) return;
           event.preventDefault();
-          void deleteSelected();
-        }
-        if (event.key === "Escape") {
-          event.preventDefault();
-          onClose?.();
+          void copyUrlToClipboard(selected.url);
         }
       }}
     >
       <section
         className={[
-          "mx-auto flex w-full max-w-3xl flex-col border border-outline-variant bg-surface shadow-2xl shadow-black/40",
-          mode === "modal" ? "h-[78vh] rounded-xl" : "min-h-screen"
+          "mx-auto flex w-full max-w-3xl flex-col overflow-hidden bg-surface-container-lowest ring-1 ring-outline-variant/60",
+          mode === "modal"
+            ? "h-[600px] rounded-2xl shadow-[0_24px_56px_-20px_rgba(15,23,42,0.22),_0_8px_24px_-12px_rgba(15,23,42,0.10),_0_1px_2px_rgba(15,23,42,0.04)]"
+            : "min-h-screen shadow-none"
         ].join(" ")}
       >
-        <div className="flex h-16 flex-none items-center gap-2 border-b border-outline-variant bg-surface-container px-4">
-          <span className="text-lg text-outline">⌕</span>
+        {/* Search Header */}
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-outline-variant/40 bg-surface-container-lowest px-4">
+          <Icon name="search" size={18} className="shrink-0 text-outline" />
           <input
             ref={inputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="h-full flex-1 border-none bg-transparent p-0 text-sm text-on-surface outline-none placeholder:text-outline"
-            placeholder="搜索书签... (#标签 @工作区)"
+            className="h-full flex-1 border-none bg-transparent p-0 font-body-md text-[15px] leading-6 text-on-surface outline-none placeholder:text-outline/80"
+            placeholder="搜索书签和历史…"
             spellCheck={false}
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="quickmark-results"
+            aria-activedescendant={selected ? `quickmark-result-${selected.id}` : undefined}
           />
-          <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
-          <Kbd>↵</Kbd>
+          {query ? (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                inputRef.current?.focus();
+              }}
+              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-outline transition-colors hover:bg-surface-container hover:text-on-surface"
+              title="清空"
+              aria-label="清空搜索"
+            >
+              <Icon name="close" size={14} />
+            </button>
+          ) : null}
+          <span className="flex shrink-0 items-center gap-0.5">
+            <Kbd>Ctrl</Kbd>
+            <Kbd>K</Kbd>
+          </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2">
-          <div className="mb-1 mt-1 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.05em] text-outline">
-            {statusText}
-          </div>
-
-          {results.map((item, index) => (
-            <BookmarkRow
-              key={item.id}
-              item={item}
-              isSelected={index === selectedIndex}
-              onMouseEnter={() => setSelectedIndex(index)}
-              onOpen={(newTab) => void openSelected(newTab)}
-              onToggleFavorite={() => void toggleFavorite(item.id)}
-              onToggleUnread={() => void toggleUnread(item.id)}
-            />
+        {/* Source Filter */}
+        <div className="flex shrink-0 items-center gap-2 border-b border-outline-variant/40 bg-surface-container-lowest/80 px-4 py-1.5">
+          {(["all", "bookmark", "history"] as SourceFilter[]).map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setSourceFilter(filter)}
+              className={[
+                "h-7 cursor-pointer rounded-lg px-2.5 text-[12px] font-medium transition-colors",
+                sourceFilter === filter
+                  ? "bg-primary text-on-primary"
+                  : "text-outline hover:bg-surface-container hover:text-on-surface"
+              ].join(" ")}
+            >
+              {filter === "all" ? "全部" : filter === "bookmark" ? "书签" : "历史"}
+            </button>
           ))}
+        </div>
 
-          {!isLoading && !results.length ? (
-            <div className="px-2 py-12 text-center text-sm text-on-surface-variant">
-              {query ? "未找到匹配的书签。" : "在任意页面按 Command/Ctrl + Shift + S 保存当前网页。"}
+        {/* Content Area */}
+        <div
+          className="flex-1 overflow-y-auto py-2"
+          onScroll={(event) => {
+            if (isNearScrollBottom(event.currentTarget)) {
+              setVisibleResultCount((count) =>
+                getNextVisibleResultCount(count, results.length, RESULT_PAGE_SIZE)
+              );
+            }
+          }}
+        >
+          {!query.trim() && searchHistory.length > 0 ? (
+            <div className="mb-1">
+              {historyExpanded ? (
+                <>
+                  <div className="flex items-center justify-between px-4 pb-0.5 pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-outline/80">
+                    <span>最近搜索</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setHistoryExpanded(false)}
+                        className="cursor-pointer rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-tight text-outline/70 transition-colors hover:bg-surface-container hover:text-on-surface"
+                      >
+                        收起
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void saveSearchHistory([]).then(() => setSearchHistory([]));
+                        }}
+                        className="cursor-pointer rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-tight text-outline/70 transition-colors hover:bg-surface-container hover:text-on-surface"
+                      >
+                        清空
+                      </button>
+                    </div>
+                  </div>
+                  <div className="hide-scrollbar flex gap-1.5 overflow-x-auto px-4 py-1">
+                    {searchHistory.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setQuery(h)}
+                        className="flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-surface-container px-2.5 text-[12px] text-on-surface transition-colors hover:bg-surface-container-high"
+                      >
+                        <Icon name="history" size={12} className="shrink-0 text-outline/60" />
+                        <span className="truncate">{h}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-between px-4 py-1.5">
+                  <span className="text-[11px] text-outline/60">
+                    最近搜索 · {searchHistory.length} 条
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryExpanded(true)}
+                    className="cursor-pointer rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-tight text-outline/70 transition-colors hover:bg-surface-container hover:text-on-surface"
+                  >
+                    展开
+                  </button>
+                </div>
+              )}
             </div>
           ) : null}
+
+          {query.trim() && results.length > 0 ? (
+            <div className="px-4 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-wider text-outline/80">
+              {statusText}
+            </div>
+          ) : null}
+
+          <div id="quickmark-results" className="flex flex-col" role="listbox" aria-label="搜索结果">
+            {isLoading && results.length === 0 ? (
+              <>
+                <LoadingRow />
+                <LoadingRow />
+                <LoadingRow />
+              </>
+            ) : null}
+            {visibleResults.map((item, index) => (
+              <BookmarkRow
+                key={item.id}
+                item={item}
+                folderPath={folderPaths.get(item.id) ?? []}
+                query={query}
+                index={index}
+                isSelected={index === selectedIndex}
+                onMouseEnter={() => setSelectedIndex(index)}
+                onOpen={(newTab) => void openSelected(newTab)}
+              />
+            ))}
+          </div>
+
+          {error ? (
+            <div className="mx-3 mt-2 flex items-center justify-between gap-3 rounded-xl border border-error-container/60 bg-error-container/30 px-4 py-3 text-[13px] text-on-error-container">
+              <span>无法加载书签和历史记录。</span>
+              <button
+                type="button"
+                onClick={() => void refresh({ preferFresh: true })}
+                className="shrink-0 cursor-pointer rounded-md border border-error/30 bg-surface-container-lowest px-2.5 py-1 font-code text-[11px] text-error transition-colors hover:bg-error-container/70"
+              >
+                重试
+              </button>
+            </div>
+          ) : null}
+
+          {!isLoading && !error && !results.length ? (
+            <EmptyState
+              query={query}
+              hasHistory={searchHistory.length > 0}
+              onSearchWeb={() => void openWebSearch(query)}
+            />
+          ) : null}
         </div>
 
-        <footer className="flex flex-none items-center gap-2 border-t border-outline-variant bg-surface-container-low px-4 py-2 text-xs text-outline">
-          <span>↑↓ 选择</span>
-          <span>·</span>
-          <span>Enter 打开</span>
-          <span>·</span>
-          <span>{isMac ? "⌘" : "Ctrl"} Enter 新标签页</span>
-          <span>·</span>
-          <span>Delete 删除</span>
-          {onClose ? (
-            <>
-              <span>·</span>
-              <span>Esc 关闭</span>
-            </>
-          ) : null}
-        </footer>
+        {/* Footer */}
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-outline-variant/40 bg-surface-container-low/60 px-3 py-2 text-[11px] text-outline">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="flex items-center gap-1.5">
+              <Kbd>↑↓</Kbd>
+              <span>导航</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Kbd>↵</Kbd>
+              <span>{selected ? "打开" : query ? "搜索" : "打开"}</span>
+            </span>
+            <span className="hidden items-center gap-1.5 sm:flex">
+              <span className="flex items-center gap-0.5">
+                <Kbd>Ctrl</Kbd>
+                <Kbd>↵</Kbd>
+              </span>
+              <span>新标签</span>
+            </span>
+            <span className="hidden items-center gap-1.5 sm:flex">
+              <span className="flex items-center gap-0.5">
+                <Kbd>Ctrl</Kbd>
+                <Kbd>1–9</Kbd>
+              </span>
+              <span>直达</span>
+            </span>
+            {selected ? (
+              <span className="hidden items-center gap-1.5 lg:flex">
+                <span className="flex items-center gap-0.5">
+                  <Kbd>Ctrl</Kbd>
+                  <Kbd>C</Kbd>
+                </span>
+                <span>复制链接</span>
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              title={`主题: ${themePref === "system" ? "跟随系统" : themePref === "light" ? "浅色" : "深色"}`}
+              onClick={() => {
+                const next: ThemePreference =
+                  themePref === "system" ? "light" : themePref === "light" ? "dark" : "system";
+                setThemePref(next);
+                saveThemePreference(next);
+              }}
+              className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[11px] text-outline transition-colors hover:bg-surface-container hover:text-on-surface"
+            >
+              <Icon
+                name={themePref === "dark" || (themePref === "system" && effectiveTheme === "dark") ? "dark_mode" : "light_mode"}
+                size={12}
+              />
+              <span>{themePref === "system" ? "自动" : themePref === "light" ? "浅色" : "深色"}</span>
+            </button>
+            {onClose ? (
+              <span className="flex items-center gap-1.5">
+                <Kbd>Esc</Kbd>
+                <span>{query ? "清空" : "关闭"}</span>
+              </span>
+            ) : null}
+          </div>
+        </div>
       </section>
     </main>
   );
 }
 
-function BookmarkRow({
-  item,
-  isSelected,
-  onMouseEnter,
-  onOpen,
-  onToggleFavorite,
-  onToggleUnread,
-}: {
-  item: BookmarkItem;
-  isSelected: boolean;
-  onMouseEnter: () => void;
-  onOpen: (newTab: boolean) => void;
-  onToggleFavorite: () => void;
-  onToggleUnread: () => void;
-}) {
+function Kbd({ children }: { children: ReactNode }) {
   return (
-    <div
-      onMouseEnter={onMouseEnter}
-      onClick={(event) => onOpen(event.metaKey || event.ctrlKey)}
-      className={[
-        "group relative flex w-full cursor-pointer items-start gap-2 rounded-lg border-l-2 p-2 text-left transition-colors",
-        isSelected
-          ? "border-primary bg-primary-container/10 shadow-[0_0_10px_rgba(78,142,255,0.10)]"
-          : "border-transparent hover:bg-surface-container-high"
-      ].join(" ")}
-    >
-      <div className="relative mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded border border-outline-variant bg-surface-container">
-        {item.isUnread && (
-          <span
-            onClick={(e) => { e.stopPropagation(); onToggleUnread(); }}
-            className="absolute -left-0.5 -top-0.5 z-10 h-2 w-2 cursor-pointer rounded-full bg-primary"
-            aria-label="未读，点击标记为已读"
-          />
-        )}
-        {item.favicon ? (
-          <img src={item.favicon} alt="" className="h-4 w-4" />
-        ) : (
-          <span className="text-[10px] font-semibold uppercase text-outline">{item.domain.slice(0, 1)}</span>
-        )}
-      </div>
+    <kbd className="flex h-[18px] items-center justify-center rounded border border-outline-variant/50 bg-surface-container/70 px-1.5 font-code text-[10px] font-medium text-outline">
+      {children}
+    </kbd>
+  );
+}
 
+function LoadingRow() {
+  return (
+    <div className="mx-2 flex items-center gap-3 rounded-xl px-3 py-2.5">
+      <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-surface-container" />
       <div className="min-w-0 flex-1">
-        <div className={["truncate text-sm font-medium", isSelected ? "text-primary" : "text-on-surface"].join(" ")}>
-          {item.title}
-        </div>
-        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-outline">
-          <span className="truncate">{item.domain}</span>
-          <span className="h-0.5 w-0.5 flex-none rounded-full bg-outline" />
-          <span className="truncate">{compactUrl(item.url)}</span>
-          <span className="h-0.5 w-0.5 flex-none rounded-full bg-outline" />
-          <span className="flex-none">{item.visitCount} 次访问</span>
-        </div>
+        <div className="mb-1.5 h-3.5 w-2/5 animate-pulse rounded-md bg-surface-container" />
+        <div className="h-3 w-3/5 animate-pulse rounded-md bg-surface-container-low" />
       </div>
-
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-        className={["flex-none text-sm transition-colors", item.isFavorite ? "text-primary" : "text-outline hover:text-primary"].join(" ")}
-        title={item.isFavorite ? "取消收藏" : "收藏"}
-        aria-pressed={item.isFavorite}
-      >
-        {item.isFavorite ? "★" : "☆"}
-      </button>
     </div>
   );
 }
 
-function Kbd({ children }: { children: string }) {
+function BookmarkRow({
+  item,
+  folderPath,
+  query,
+  index,
+  isSelected,
+  onMouseEnter,
+  onOpen,
+}: {
+  item: BookmarkItem;
+  folderPath: string[];
+  query: string;
+  index: number;
+  isSelected: boolean;
+  onMouseEnter: () => void;
+  onOpen: (newTab: boolean) => void;
+}) {
+  const [imgSrc, setImgSrc] = useState(item.favicon);
+  const displayFolderPath = getDisplayFolderPath(folderPath);
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isSelected && rowRef.current) {
+      rowRef.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [isSelected]);
+
   return (
-    <span className="rounded border border-outline-variant bg-outline-variant px-2 py-1 text-[11px] font-medium leading-none text-on-surface-variant">
-      {children}
-    </span>
+    <div
+      ref={rowRef}
+      id={`quickmark-result-${item.id}`}
+      role="option"
+      aria-selected={isSelected}
+      tabIndex={-1}
+      onMouseEnter={onMouseEnter}
+      onClick={(event) => onOpen(event.metaKey || event.ctrlKey)}
+      className={[
+        "group relative mx-2 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-150",
+        isSelected
+          ? "bg-primary-fixed/40 ring-1 ring-inset ring-primary/15"
+          : "hover:bg-surface-container-low/70"
+      ].join(" ")}
+    >
+      {/* Favicon + Number Badge */}
+      <div className="relative shrink-0">
+        {index < 9 ? (
+          <span
+            className={[
+              "absolute -left-1.5 -top-1.5 z-20 flex h-4 min-w-4 items-center justify-center rounded-md px-1 text-[9.5px] font-semibold transition-colors",
+              isSelected
+                ? "bg-primary text-on-primary"
+                : "bg-surface-container-high text-outline group-hover:bg-surface-container-highest group-hover:text-on-surface"
+            ].join(" ")}
+            aria-hidden
+          >
+            {index + 1}
+          </span>
+        ) : null}
+        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-surface-container/70 ring-1 ring-outline-variant/30">
+          {imgSrc ? (
+            <img
+              src={imgSrc}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={() => {
+                if (imgSrc === item.favicon) {
+                  setImgSrc(getExtensionFaviconUrl(item.url));
+                } else {
+                  setImgSrc("");
+                }
+              }}
+            />
+          ) : (
+            <Icon name="language" size={18} className="text-primary" />
+          )}
+        </div>
+      </div>
+
+      {/* Title + URL */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-[14px] font-semibold leading-5 tracking-tight text-on-surface">
+            <HighlightedText text={item.title} query={query} />
+          </span>
+          {item.source === "history" && (
+            <span className="shrink-0 rounded-md bg-tertiary-fixed/70 px-1.5 py-0.5 text-[10px] font-medium text-on-tertiary-fixed">
+              历史
+            </span>
+          )}
+          {folderPath.length > 0 && (
+            <span className="hidden shrink-0 items-center gap-1 rounded-md bg-surface-container/60 px-1.5 py-0.5 text-[10.5px] text-outline sm:inline-flex">
+              <Icon name="workspaces" size={10} className="shrink-0" />
+              <span className="max-w-[140px] truncate">
+                <HighlightedText text={displayFolderPath} query={query} />
+              </span>
+            </span>
+          )}
+        </div>
+        <div className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] leading-4 text-outline">
+          <Icon name="link" size={11} className="shrink-0 text-outline/70" />
+          <span className="truncate" title={item.url}>
+            <HighlightedText text={item.url} query={query} />
+          </span>
+        </div>
+      </div>
+
+      {/* Right Action Area */}
+      <div className="flex shrink-0 items-center gap-1">
+        <span
+          className="hidden items-center gap-0.5 rounded-md px-1.5 py-0.5 font-code text-[10px] tracking-tight text-outline sm:flex"
+          aria-hidden
+        >
+          {item.visitCount}
+          <span className="opacity-60">次</span>
+        </span>
+        <button
+          type="button"
+          aria-label={`复制链接：${item.title}`}
+          title="复制链接"
+          onClick={(event) => {
+            event.stopPropagation();
+            void copyUrlToClipboard(item.url);
+          }}
+          className={[
+            "flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-outline transition-colors hover:bg-surface-container hover:text-on-surface",
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          ].join(" ")}
+        >
+          <Icon name="copy" size={13} />
+        </button>
+        <div
+          className={[
+            "hidden items-center gap-1 rounded-md px-2 py-1 font-code text-[10.5px] transition-all sm:flex",
+            isSelected
+              ? "bg-primary text-on-primary shadow-sm"
+              : "bg-surface-container/60 text-outline opacity-0 group-hover:opacity-100"
+          ].join(" ")}
+          aria-hidden
+        >
+          <span>↵</span>
+          <span>打开</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function compactUrl(url: string): string {
-  return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  return (
+    <>
+      {splitQueryMatch(text, query).map((segment, index) => (
+        <span key={`${segment.text}-${index}`} className={segment.match ? "rounded bg-tertiary-fixed px-0.5 text-on-tertiary-fixed" : undefined}>
+          {segment.text}
+        </span>
+      ))}
+    </>
+  );
 }
 
-async function openBookmarkInExtensionPage(item: BookmarkItem, newTab: boolean): Promise<void> {
+function EmptyState({
+  query,
+  hasHistory,
+  onSearchWeb,
+}: {
+  query: string;
+  hasHistory: boolean;
+  onSearchWeb: () => void;
+}) {
+  if (query) {
+    return (
+      <div className="flex flex-col items-center gap-3 px-6 pb-6 pt-10 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-container/60 ring-1 ring-outline-variant/40">
+          <Icon name="search" size={20} className="text-outline/70" />
+        </div>
+        <div>
+          <div className="text-[14px] font-semibold text-on-surface">未找到匹配项</div>
+          <div className="mt-0.5 text-[12px] text-outline">
+            书签和历史记录里都没有 “{query}”
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onSearchWeb}
+          className="mt-1 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-[12.5px] font-medium text-on-primary shadow-sm transition-colors hover:bg-primary-container"
+        >
+          <Icon name="search" size={14} />
+          <span>用 Google 搜索</span>
+          <span className="ml-1 rounded bg-on-primary/15 px-1.5 py-0.5 font-code text-[10px]">↵</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3 px-6 pb-6 pt-10 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-container/60 ring-1 ring-outline-variant/40">
+        <Icon name="bookmarks" size={20} className="text-outline/70" />
+      </div>
+      <div>
+        <div className="text-[14px] font-semibold text-on-surface">
+          {hasHistory ? "开始输入以搜索" : "还没有书签"}
+        </div>
+        <div className="mt-0.5 text-[12px] text-outline">
+          {hasHistory ? "继续输入或选择最近搜索" : "Chrome 中保存的书签会出现在这里"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function openBookmarkDefault(item: BookmarkItem, newTab: boolean): Promise<void> {
+  if (typeof chrome === "undefined" || !chrome.tabs) {
+    window.open(item.url, "_blank");
+    return;
+  }
   if (newTab) {
     await chrome.tabs.create({ url: item.url, active: true });
     return;
   }
-
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id) {
     await chrome.tabs.update(tab.id, { url: item.url });

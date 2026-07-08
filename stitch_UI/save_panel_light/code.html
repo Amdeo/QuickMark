@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickMark Save Bookmark Panel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=system-ui-mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#d8e2ff",
+                        "secondary": "#006c49",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb77d",
+                        "on-primary-fixed-variant": "#004395",
+                        "surface-container": "#e9edff",
+                        "tertiary-container": "#b15f00",
+                        "on-tertiary-fixed": "#2f1500",
+                        "secondary-fixed": "#6ffbbe",
+                        "surface-variant": "#dce2f7",
+                        "on-error-container": "#93000a",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#2671e1",
+                        "on-surface": "#141b2b",
+                        "surface-container-high": "#e1e8fd",
+                        "surface-bright": "#f9f9ff",
+                        "inverse-on-surface": "#edf0ff",
+                        "error": "#ba1a1a",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f1f3ff",
+                        "on-secondary-fixed": "#002113",
+                        "primary-fixed-dim": "#aec6ff",
+                        "surface-dim": "#d3daef",
+                        "on-secondary-container": "#00714d",
+                        "secondary-container": "#6cf8bb",
+                        "outline": "#727785",
+                        "primary": "#0058be",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed": "#001a42",
+                        "surface-tint": "#005ac3",
+                        "tertiary": "#8d4b00",
+                        "outline-variant": "#c2c6d6",
+                        "inverse-primary": "#aec6ff",
+                        "on-tertiary-container": "#fffbff",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "surface": "#f9f9ff",
+                        "background": "#f9f9ff",
+                        "on-primary-container": "#fefcff",
+                        "inverse-surface": "#293040",
+                        "on-background": "#141b2b",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#dce2f7",
+                        "tertiary-fixed": "#ffdcc3",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-surface-variant": "#424753",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#4edea3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "0.25rem",
+                        "base": "4px",
+                        "md": "1rem",
+                        "sm": "0.5rem",
+                        "element-gap": "8px",
+                        "container-padding": "12px",
+                        "lg": "1.5rem"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "h2": ["Inter"],
+                        "code": ["system-ui-mono"],
+                        "label-caps": ["Inter"],
+                        "h1": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["13px", {"lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "h2": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "code": ["12px", {"lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: transparent; } /* For extension popup feeling */
+        .popup-container {
+            width: 360px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 bg-surface-dim">
+<!-- Popup Panel Container -->
+<div class="popup-container bg-surface-container-lowest border border-outline-variant rounded-xl flex flex-col overflow-hidden relative">
+<!-- Header -->
+<div class="flex items-center justify-between p-container-padding border-b border-outline-variant bg-surface-bright">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+<h2 class="font-h2 text-h2 text-on-surface">Save Bookmark</h2>
+</div>
+<button class="text-outline hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Form Content -->
+<div class="p-container-padding flex flex-col gap-element-gap">
+<!-- Title -->
+<div class="flex flex-col gap-[2px]">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Title</label>
+<input class="h-[32px] w-full px-2 bg-surface-container-lowest border border-outline-variant rounded focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none font-body-sm text-body-sm text-on-surface truncate" type="text" value="Tailwind CSS - Rapidly build modern websites without ever leaving your HTML."/>
+</div>
+<!-- URL -->
+<div class="flex flex-col gap-[2px]">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">URL</label>
+<input class="h-[32px] w-full px-2 bg-surface-container-low border border-outline-variant rounded font-code text-code text-on-surface-variant truncate focus:outline-none cursor-not-allowed" readonly="" type="text" value="https://tailwindcss.com"/>
+</div>
+<!-- Workspace -->
+<div class="flex flex-col gap-[2px]">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Workspace</label>
+<div class="relative">
+<select class="h-[32px] w-full pl-2 pr-8 bg-surface-container-lowest border border-outline-variant rounded focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none font-body-sm text-body-sm text-on-surface appearance-none cursor-pointer">
+<option>Personal Projects</option>
+<option>Work References</option>
+<option>Design Inspiration</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[16px]">expand_more</span>
+</div>
+</div>
+<!-- Tags -->
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Tags</label>
+<div class="relative">
+<input class="h-[32px] w-full pl-8 pr-2 bg-surface-container-lowest border border-outline-variant rounded focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none font-body-sm text-body-sm text-on-surface" placeholder="Add tags..." type="text"/>
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[16px]">sell</span>
+</div>
+<!-- Suggested Tags -->
+<div class="flex flex-wrap gap-2 mt-1">
+<button class="bg-surface-container border border-outline-variant px-2 py-0.5 rounded-full font-body-sm text-body-sm text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">add</span> design
+                    </button>
+<button class="bg-surface-container border border-outline-variant px-2 py-0.5 rounded-full font-body-sm text-body-sm text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">add</span> dev
+                    </button>
+<button class="bg-surface-container border border-outline-variant px-2 py-0.5 rounded-full font-body-sm text-body-sm text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">add</span> ai
+                    </button>
+</div>
+</div>
+<!-- Notes -->
+<div class="flex flex-col gap-[2px]">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Why save this?</label>
+<textarea class="w-full px-2 py-1.5 bg-surface-container-lowest border border-outline-variant rounded focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none font-body-sm text-body-sm text-on-surface resize-none" placeholder="Add a note (optional)..." rows="2"></textarea>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="p-container-padding bg-surface-bright border-t border-outline-variant flex justify-end gap-2">
+<button class="px-3 py-1.5 bg-surface-container-lowest border border-outline-variant rounded font-body-md text-body-md text-on-surface hover:bg-surface-container-low transition-colors shadow-sm">
+                Cancel
+            </button>
+<button class="px-3 py-1.5 bg-primary rounded font-body-md text-body-md text-on-primary hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">save</span>
+                Save Bookmark
+            </button>
+</div>
+</div>
+</body></html>

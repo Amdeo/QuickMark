@@ -3,11 +3,22 @@
   "name": "QuickMark",
   "description": "Keyboard-first local bookmark search for Chrome.",
   "version": "0.1.0",
-  "permissions": ["storage", "tabs", "scripting"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["tabs", "history", "bookmarks", "favicon", "scripting", "storage"],
   "action": {
     "default_title": "Open QuickMark",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "background": {
     "service_worker": "assets/background.js",
@@ -22,7 +33,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/styles.css"],
+      "resources": ["assets/styles.css", "_favicon/*"],
       "matches": ["http://*/*", "https://*/*"]
     }
   ],
@@ -33,20 +44,6 @@
         "mac": "Command+Shift+K"
       },
       "description": "Open QuickMark search"
-    },
-    "save-current-page": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+S",
-        "mac": "Command+Shift+S"
-      },
-      "description": "Save current page to QuickMark"
-    },
-    "open-dashboard": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+E",
-        "mac": "Command+Shift+E"
-      },
-      "description": "Open QuickMark dashboard"
     }
   }
 }

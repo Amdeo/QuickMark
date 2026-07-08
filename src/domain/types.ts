@@ -4,28 +4,17 @@ export type BookmarkItem = {
   url: string;
   domain: string;
   favicon?: string;
-  createdAt: number;
-  updatedAt: number;
+  createdAt?: number;
   lastVisitedAt?: number;
   visitCount: number;
-  tags: string[];
-  workspaceId: string | null;
-  notes: string;
-  isFavorite: boolean;
-  isUnread: boolean;
+  source?: "bookmark" | "history";
 };
 
-export type Workspace = {
+export type HistoryItem = {
   id: string;
-  name: string;
-  description?: string;
-  color?: string;
-  createdAt: number;
-  updatedAt: number;
-};
-
-export type TabSnapshot = {
-  title?: string;
-  url?: string;
-  favIconUrl?: string;
+  url: string;
+  title: string;
+  lastVisitTime: number;
+  visitCount: number;
+  typedCount?: number;
 };

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickMark Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed": "#d8e2ff",
+                      "secondary": "#006c49",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-fixed-dim": "#ffb77d",
+                      "on-primary-fixed-variant": "#004395",
+                      "surface-container": "#e9edff",
+                      "tertiary-container": "#b15f00",
+                      "on-tertiary-fixed": "#2f1500",
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-variant": "#dce2f7",
+                      "on-error-container": "#93000a",
+                      "on-primary": "#ffffff",
+                      "primary-container": "#2671e1",
+                      "on-surface": "#141b2b",
+                      "surface-container-high": "#e1e8fd",
+                      "surface-bright": "#f9f9ff",
+                      "inverse-on-surface": "#edf0ff",
+                      "error": "#ba1a1a",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-low": "#f1f3ff",
+                      "on-secondary-fixed": "#002113",
+                      "primary-fixed-dim": "#aec6ff",
+                      "surface-dim": "#d3daef",
+                      "on-secondary-container": "#00714d",
+                      "secondary-container": "#6cf8bb",
+                      "outline": "#727785",
+                      "primary": "#0058be",
+                      "error-container": "#ffdad6",
+                      "on-primary-fixed": "#001a42",
+                      "surface-tint": "#005ac3",
+                      "tertiary": "#8d4b00",
+                      "outline-variant": "#c2c6d6",
+                      "inverse-primary": "#aec6ff",
+                      "on-tertiary-container": "#fffbff",
+                      "on-tertiary-fixed-variant": "#6e3900",
+                      "surface": "#f9f9ff",
+                      "background": "#f9f9ff",
+                      "on-primary-container": "#fefcff",
+                      "inverse-surface": "#293040",
+                      "on-background": "#141b2b",
+                      "on-error": "#ffffff",
+                      "surface-container-highest": "#dce2f7",
+                      "tertiary-fixed": "#ffdcc3",
+                      "on-secondary-fixed-variant": "#005236",
+                      "on-surface-variant": "#424753",
+                      "on-secondary": "#ffffff",
+                      "secondary-fixed-dim": "#4edea3"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xs": "0.25rem",
+                      "base": "4px",
+                      "md": "1rem",
+                      "sm": "0.5rem",
+                      "element-gap": "8px",
+                      "container-padding": "12px",
+                      "lg": "1.5rem"
+              },
+              "fontFamily": {
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "h2": [
+                              "Inter"
+                      ],
+                      "code": [
+                              "system-ui-mono"
+                      ],
+                      "label-caps": [
+                              "Inter"
+                      ],
+                      "h1": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "h2": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "code": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "11px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "h1": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex font-body-md text-body-md antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Shared Component: SideNavBar -->
+<aside class="h-screen w-64 border-r fixed left-0 top-0 bg-surface-container-lowest border-outline-variant shadow-none z-50 flex flex-col py-4 gap-2">
+<!-- Header -->
+<div class="px-6 pb-6 pt-2 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container overflow-hidden shrink-0">
+<span class="material-symbols-outlined text-[18px]">bookmark</span>
+</div>
+<div class="flex flex-col">
+<span class="text-h2 font-h2 text-on-surface tracking-tight">QuickMark</span>
+<span class="text-body-sm font-body-sm text-outline">Power Bookmarking</span>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex-1 flex flex-col gap-1 px-2 font-body-sm text-body-sm antialiased tracking-tight">
+<!-- Inactive Item -->
+<a class="flex items-center gap-3 px-4 py-2 w-full text-left rounded-DEFAULT text-outline hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150 active:scale-95 transition-transform group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface">bookmarks</span>
+                All Bookmarks
+            </a>
+<!-- Inactive Item -->
+<a class="flex items-center gap-3 px-4 py-2 w-full text-left rounded-DEFAULT text-outline hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150 active:scale-95 transition-transform group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface">schedule</span>
+                Recent
+            </a>
+<!-- Inactive Item -->
+<a class="flex items-center gap-3 px-4 py-2 w-full text-left rounded-DEFAULT text-outline hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150 active:scale-95 transition-transform group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface">star</span>
+                Favorites
+            </a>
+<!-- Inactive Item -->
+<a class="flex items-center gap-3 px-4 py-2 w-full text-left rounded-DEFAULT text-outline hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150 active:scale-95 transition-transform group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface">workspaces</span>
+                Workspaces
+            </a>
+<!-- Inactive Item -->
+<a class="flex items-center gap-3 px-4 py-2 w-full text-left rounded-DEFAULT text-outline hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150 active:scale-95 transition-transform group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface">sell</span>
+                Tags
+            </a>
+<div class="my-2 border-t border-outline-variant/50 mx-4"></div>
+<!-- Active Item (Settings) -->
+<a class="flex items-center gap-3 px-4 py-2 w-full text-left rounded-DEFAULT text-primary font-semibold border-r-2 border-primary bg-primary-fixed/50" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">settings</span>
+                Settings
+            </a>
+</nav>
+<!-- User Profile Area -->
+<div class="mt-auto px-4 w-full">
+<button class="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant">
+<img alt="User profile" class="w-8 h-8 rounded-full border border-outline-variant object-cover" data-alt="A professional headshot of a person, used as a user profile avatar in a clean, modern interface. The image is small, circular, and features soft, balanced lighting indicative of a polished digital product environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtY3mc7Q4_cGwaU9TXLQlZ40crAApnBJAvk5nuK1R9m_QdThIRqyZSEoX2hYecflKFI3zRz8-_H_ainFIu14_WXWO9ynu_WHVUzVA62PaU7d7WOiDJALiVz-u4buNfE9bvoLwmUFjamlQ2Z1bkKDoSJYlJHGtaXky0P7KND4LkX-lPtN7_fbtVKbbALV8DaBfoEzl2PNQw6ZO7q1bC94ysc_rdLvEHZWSMJKUuRkz5n981CGl6YIH2MT_7NL0bNNOJKNprfK9nuvCz"/>
+<div class="flex flex-col text-left">
+<span class="text-body-sm font-body-sm font-medium text-on-surface">Alex Mercer</span>
+<span class="text-[11px] leading-tight text-outline">Pro Plan</span>
+</div>
+<span class="material-symbols-outlined ml-auto text-outline text-[18px]">expand_more</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 w-full flex-1 flex flex-col p-container-padding">
+<!-- Top App Bar (Simplified for Settings Context) -->
+<header class="w-full h-14 flex items-center justify-between px-md mb-md">
+<div>
+<h1 class="font-h1 text-h1 text-on-surface tracking-tight">Settings</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Manage your preferences, shortcuts, and integrations.</p>
+</div>
+</header>
+<!-- Settings Content Grid -->
+<div class="w-full max-w-3xl mx-auto flex flex-col gap-lg pb-12">
+<!-- Section 1: Shortcuts -->
+<section class="flex flex-col gap-sm">
+<h2 class="font-h2 text-h2 text-on-surface px-1">Keyboard Shortcuts</h2>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm shadow-outline-variant/10">
+<div class="flex flex-col divide-y divide-outline-variant/50">
+<!-- Row 1 -->
+<div class="flex items-center justify-between p-md hover:bg-surface-bright transition-colors">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-medium text-on-surface">Global Search</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Quickly search across all bookmarks and tags.</span>
+</div>
+<div class="flex items-center gap-2">
+<kbd class="font-code text-code text-on-surface bg-surface-container border border-outline-variant rounded px-2 py-1 shadow-sm">⌘</kbd>
+<kbd class="font-code text-code text-on-surface bg-surface-container border border-outline-variant rounded px-2 py-1 shadow-sm">K</kbd>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center justify-between p-md hover:bg-surface-bright transition-colors">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-medium text-on-surface">Save Current Tab</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Instantly bookmark the active page.</span>
+</div>
+<div class="flex items-center gap-2">
+<kbd class="font-code text-code text-on-surface bg-surface-container border border-outline-variant rounded px-2 py-1 shadow-sm">⌘</kbd>
+<kbd class="font-code text-code text-on-surface bg-surface-container border border-outline-variant rounded px-2 py-1 shadow-sm">D</kbd>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center justify-between p-md hover:bg-surface-bright transition-colors">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-medium text-on-surface">Open Workspaces</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Navigate to your organized collections.</span>
+</div>
+<div class="flex items-center gap-2">
+<kbd class="font-code text-code text-on-surface bg-surface-container border border-outline-variant rounded px-2 py-1 shadow-sm">⇧</kbd>
+<kbd class="font-code text-code text-on-surface bg-surface-container border border-outline-variant rounded px-2 py-1 shadow-sm">⌘</kbd>
+<kbd class="font-code text-code text-on-surface bg-surface-container border border-outline-variant rounded px-2 py-1 shadow-sm">W</kbd>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Appearance -->
+<section class="flex flex-col gap-sm">
+<h2 class="font-h2 text-h2 text-on-surface px-1">Appearance</h2>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm shadow-outline-variant/10">
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-4">Customize the interface theme to suit your environment.</p>
+<div class="grid grid-cols-3 gap-4">
+<!-- Theme Option: Light (Active) -->
+<label class="cursor-pointer relative flex flex-col items-center gap-3 p-4 rounded-lg border-2 border-primary bg-primary-fixed/20 hover:bg-primary-fixed/30 transition-colors">
+<input checked="" class="peer sr-only" name="theme" type="radio" value="light"/>
+<span class="material-symbols-outlined text-[28px] text-primary" style="font-variation-settings: 'FILL' 1;">light_mode</span>
+<span class="font-body-sm text-body-sm font-medium text-primary">Light Mode</span>
+</label>
+<!-- Theme Option: Dark -->
+<label class="cursor-pointer relative flex flex-col items-center gap-3 p-4 rounded-lg border border-outline-variant bg-surface-bright hover:bg-surface-container-low hover:border-outline transition-colors">
+<input class="peer sr-only" name="theme" type="radio" value="dark"/>
+<span class="material-symbols-outlined text-[28px] text-on-surface-variant">dark_mode</span>
+<span class="font-body-sm text-body-sm font-medium text-on-surface">Dark Mode</span>
+</label>
+<!-- Theme Option: System -->
+<label class="cursor-pointer relative flex flex-col items-center gap-3 p-4 rounded-lg border border-outline-variant bg-surface-bright hover:bg-surface-container-low hover:border-outline transition-colors">
+<input class="peer sr-only" name="theme" type="radio" value="system"/>
+<span class="material-symbols-outlined text-[28px] text-on-surface-variant">desktop_windows</span>
+<span class="font-body-sm text-body-sm font-medium text-on-surface">System Default</span>
+</label>
+</div>
+</div>
+</section>
+<!-- Section 3: AI Assistant -->
+<section class="flex flex-col gap-sm">
+<h2 class="font-h2 text-h2 text-on-surface px-1">AI Assistant</h2>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm shadow-outline-variant/10 flex items-start justify-between">
+<div class="flex flex-col max-w-lg">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-tertiary text-[20px]" style="font-variation-settings: 'FILL' 1;">magic_button</span>
+<span class="font-body-md text-body-md font-medium text-on-surface">Smart Auto-Tagging</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Automatically analyze page content and suggest relevant tags when saving a new bookmark. This process happens securely on device.</span>
+</div>
+<!-- Toggle Switch -->
+<label class="relative inline-flex items-center cursor-pointer mt-1">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary border border-transparent shadow-sm"></div>
+</label>
+</div>
+</section>
+<!-- Section 4: Data Management -->
+<section class="flex flex-col gap-sm">
+<h2 class="font-h2 text-h2 text-on-surface px-1">Data Management</h2>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm shadow-outline-variant/10">
+<div class="flex flex-col gap-6">
+<!-- Import -->
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-medium text-on-surface">Import Bookmarks</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Import from Chrome, Firefox, or a standard HTML file.</span>
+</div>
+<button class="bg-surface-container-lowest border border-outline-variant hover:border-outline hover:bg-surface-container-low text-on-surface px-4 py-2 rounded-DEFAULT font-body-sm text-body-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">upload</span>
+                                Import Data
+                            </button>
+</div>
+<div class="border-t border-outline-variant/50 w-full"></div>
+<!-- Export -->
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-medium text-on-surface">Export Bookmarks</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Download a backup of all your links and tags as CSV.</span>
+</div>
+<button class="bg-surface-container-lowest border border-outline-variant hover:border-outline hover:bg-surface-container-low text-on-surface px-4 py-2 rounded-DEFAULT font-body-sm text-body-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                                Export Data
+                            </button>
+</div>
+<div class="border-t border-error-container w-full mt-2"></div>
+<!-- Danger Zone -->
+<div class="flex items-center justify-between bg-error-container/20 p-4 rounded-lg border border-error-container">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-medium text-error">Delete Account</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Permanently remove your account and all associated data.</span>
+</div>
+<button class="bg-surface-container-lowest border border-error hover:bg-error hover:text-on-error text-error px-4 py-2 rounded-DEFAULT font-body-sm text-body-sm font-medium transition-colors shadow-sm">
+                                Delete Account
+                            </button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

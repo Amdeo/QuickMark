@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc && vite build && esbuild src/content/index.tsx --bundle --format=iife --platform=browser --outfile=dist/assets/content.js --define:process.env.NODE_ENV='\"production\"'",
+    "build": "tsc && vite build && npx tailwindcss -i src/styles.css -o dist/assets/styles.css --minify && esbuild src/content/index.tsx --bundle --format=iife --platform=browser --outfile=dist/assets/content.js --define:process.env.NODE_ENV='\"production\"'",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "fuse.js": "^7.0.0",
+    "lucide-react": "^1.14.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

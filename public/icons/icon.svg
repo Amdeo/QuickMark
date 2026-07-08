@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="20%" r="78%">
+      <stop offset="0" stop-color="#27324e"/>
+      <stop offset="0.48" stop-color="#171f35"/>
+      <stop offset="1" stop-color="#090f1e"/>
+    </radialGradient>
+    <linearGradient id="edge" x1="120" y1="0" x2="904" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34405e"/>
+      <stop offset="0.55" stop-color="#121a2d"/>
+      <stop offset="1" stop-color="#26314f"/>
+    </linearGradient>
+    <linearGradient id="bookmark" x1="315" y1="278" x2="743" y2="795" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4b7cff"/>
+      <stop offset="0.45" stop-color="#38a5f1"/>
+      <stop offset="1" stop-color="#4ff0d2"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="602" y1="448" x2="648" y2="538" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#68ffe8"/>
+      <stop offset="1" stop-color="#29dec0"/>
+    </linearGradient>
+    <filter id="bookmarkShadow" x="-20%" y="-15%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="26" stdDeviation="30" flood-color="#000000" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="18" flood-color="#58e7df" flood-opacity="0.16"/>
+    </filter>
+    <filter id="pillShadow" x="-20%" y="-40%" width="140%" height="180%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="whiteGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#ffffff" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect x="1" y="1" width="1022" height="1022" rx="202" fill="url(#bgGlow)" stroke="url(#edge)" stroke-width="3"/>
+
+  <g filter="url(#bookmarkShadow)">
+    <path d="M281 310c0-52 42-94 94-94h274c52 0 94 42 94 94v424c0 41-46 65-79 41L535 684c-14-10-33-10-47 0L360 775c-33 24-79 0-79-41V310z" fill="url(#bookmark)"/>
+  </g>
+
+  <g filter="url(#pillShadow)">
+    <rect x="333" y="411" width="358" height="152" rx="76" fill="#0b1224"/>
+    <rect x="545" y="447" width="3" height="80" rx="1.5" fill="#6e7890" opacity="0.55"/>
+  </g>
+
+  <g filter="url(#whiteGlow)" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="13">
+    <circle cx="427" cy="485" r="42"/>
+    <path d="M459 517l30 30"/>
+  </g>
+
+  <path d="M623 447c7-8 20-2 18 9l-17 52c-2 6 3 12 9 12h31c10 0 15 12 8 19l-63 73c-7 8-20 2-18-9l17-52c2-6-3-12-9-12h-31c-10 0-15-12-8-19l63-73z" fill="url(#bolt)"/>
+</svg>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickMark - Workspaces</title>
+<!-- Tailwind CSS via CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Inter & System Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#d8e2ff",
+                    "secondary": "#006c49",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb77d",
+                    "on-primary-fixed-variant": "#004395",
+                    "surface-container": "#e9edff",
+                    "tertiary-container": "#b15f00",
+                    "on-tertiary-fixed": "#2f1500",
+                    "secondary-fixed": "#6ffbbe",
+                    "surface-variant": "#dce2f7",
+                    "on-error-container": "#93000a",
+                    "on-primary": "#ffffff",
+                    "primary-container": "#2671e1",
+                    "on-surface": "#141b2b",
+                    "surface-container-high": "#e1e8fd",
+                    "surface-bright": "#f9f9ff",
+                    "inverse-on-surface": "#edf0ff",
+                    "error": "#ba1a1a",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-low": "#f1f3ff",
+                    "on-secondary-fixed": "#002113",
+                    "primary-fixed-dim": "#aec6ff",
+                    "surface-dim": "#d3daef",
+                    "on-secondary-container": "#00714d",
+                    "secondary-container": "#6cf8bb",
+                    "outline": "#727785",
+                    "primary": "#0058be",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed": "#001a42",
+                    "surface-tint": "#005ac3",
+                    "tertiary": "#8d4b00",
+                    "outline-variant": "#c2c6d6",
+                    "inverse-primary": "#aec6ff",
+                    "on-tertiary-container": "#fffbff",
+                    "on-tertiary-fixed-variant": "#6e3900",
+                    "surface": "#f9f9ff",
+                    "background": "#f9f9ff",
+                    "on-primary-container": "#fefcff",
+                    "inverse-surface": "#293040",
+                    "on-background": "#141b2b",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#dce2f7",
+                    "tertiary-fixed": "#ffdcc3",
+                    "on-secondary-fixed-variant": "#005236",
+                    "on-surface-variant": "#424753",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed-dim": "#4edea3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xs": "0.25rem",
+                    "base": "4px",
+                    "md": "1rem",
+                    "sm": "0.5rem",
+                    "element-gap": "8px",
+                    "container-padding": "12px",
+                    "lg": "1.5rem"
+            },
+            "fontFamily": {
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "h2": ["Inter"],
+                    "code": ["system-ui-mono"],
+                    "label-caps": ["Inter"],
+                    "h1": ["Inter"]
+            },
+            "fontSize": {
+                    "body-sm": ["13px", {"lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400"}],
+                    "h2": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "code": ["12px", {"lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "400"}],
+                    "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dce2f7; 
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex selection:bg-primary-fixed selection:text-on-primary-fixed font-body-md">
+<!-- SideNavBar (Shared Component Translation) -->
+<!-- Applying mapped JSON styles to Design System tokens to strictly follow color rules -->
+<aside class="h-screen w-64 border-r fixed left-0 top-0 border-outline-variant bg-surface-container-lowest flex flex-col py-4 gap-2 shadow-none z-30">
+<!-- Header -->
+<div class="px-6 mb-6">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-lg bg-primary text-on-primary flex items-center justify-center font-h2 shadow-sm">
+                    Q
+                </div>
+<div>
+<h1 class="text-lg font-bold text-on-surface font-h1 leading-tight tracking-tight">QuickMark</h1>
+<p class="text-xs text-on-surface-variant font-body-sm">Power Bookmarking</p>
+</div>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<nav class="flex-1 px-3 space-y-1">
+<!-- All Bookmarks -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors duration-150 active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="bookmarks">bookmarks</span>
+<span class="font-body-md text-body-md">All Bookmarks</span>
+</a>
+<!-- Recent -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors duration-150 active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="schedule">schedule</span>
+<span class="font-body-md text-body-md">Recent</span>
+</a>
+<!-- Favorites -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors duration-150 active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="star">star</span>
+<span class="font-body-md text-body-md">Favorites</span>
+</a>
+<!-- Workspaces (Active) -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-primary font-semibold bg-primary-fixed/40 transition-colors duration-150 active:scale-95 relative overflow-hidden" href="#">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"></div>
+<span class="material-symbols-outlined text-[20px]" data-icon="workspaces" data-weight="fill">workspaces</span>
+<span class="font-body-md text-body-md">Workspaces</span>
+</a>
+<!-- Tags -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors duration-150 active:scale-95 group" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="sell">sell</span>
+<span class="font-body-md text-body-md">Tags</span>
+</a>
+</nav>
+<!-- Bottom Settings -->
+<div class="px-3 mt-auto">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- Page Header -->
+<header class="px-8 py-8 flex flex-col gap-xs border-b border-outline-variant/30 bg-surface-bright backdrop-blur-md sticky top-0 z-20">
+<h2 class="font-h1 text-[24px] leading-tight text-on-surface tracking-tight">Workspaces</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+                Organize your bookmarks into focused environments. Launch an entire workspace with a single click to instantly set up your workflow.
+            </p>
+</header>
+<!-- Content Area: Bento Grid of Workspaces -->
+<div class="p-8 flex-1">
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Workspace Card: Dev Stack -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 flex flex-col shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition-all duration-300 group">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+</div>
+<h3 class="font-h2 text-h2 text-on-surface">Dev Stack</h3>
+</div>
+<span class="bg-surface-container text-on-surface-variant font-label-caps text-label-caps px-2.5 py-1 rounded-full border border-outline-variant/50">
+                            14 LINKS
+                        </span>
+</div>
+<div class="flex-1 flex flex-col gap-2 mb-6">
+<a class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container-low transition-colors text-on-surface-variant" href="#">
+<img alt="GitHub" class="w-4 h-4 opacity-70" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBILngacWIPPIOhI3mDmDD2U6iXml1PbSINGNL1hEeFQOgVTZ24XFxYO6WbrNjK2ituXetUxr2etSgeYkJPWP76mXQ8Nh8NvcibU9715G3H6ylOiGMZnlqKBkE8UJI_SgkcjmSlzXB_3kgu3bMeDxw_QcVk2ypaVf473d8pU1YA8mDtSW2gaagWjS_jVSGajXyf6i2vE6ZICVbMJJ6gRw5o5g7uTMqwYVI172leYIEledbSTj9SNm5rqTNFphOJDP6Ke0ZrDr85IHw5"/>
+<span class="font-body-sm text-body-sm truncate">github.com/project-core</span>
+</a>
+<a class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container-low transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[16px] opacity-70">description</span>
+<span class="font-body-sm text-body-sm truncate">Next.js Documentation</span>
+</a>
+<a class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container-low transition-colors text-on-surface-variant" href="#">
+<img alt="Vercel" class="w-4 h-4 opacity-70 grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDjxYzLa3OMnO7AVyyOD33gv6FvdySr92EyZ9nC5Pf3H21cDFxfr8Tx_w_6f23JZrGvZBeZcCoFwH-2OMJyvL_o9LkbD6KyhxcjYKwZKrMVVabVw3i1pNTQwo1WZlIwtn7u1eGLuSqM2rJJiRkC3cnrhBcx1HovcX5RpfWjj0ZDpNiA4dgaEIBtk4IMlCwoV8aHDLJb9bqZ7xMWhlqNRhuSWBMfPdF8oxNVtSfyJOiIzcD56sgY0-urzkQLuUtZn0G5e6W8W2OfvEa"/>
+<span class="font-body-sm text-body-sm truncate">Vercel Deployment Dashboard</span>
+</a>
+</div>
+<button class="mt-auto w-full bg-surface text-primary border border-outline-variant hover:border-primary/50 hover:bg-primary-fixed/30 font-body-md text-body-md py-2 rounded-lg flex justify-center items-center gap-2 transition-all group-hover:bg-primary group-hover:text-on-primary group-hover:border-primary shadow-sm">
+<span class="material-symbols-outlined text-[18px] group-hover:animate-pulse" data-icon="rocket_launch">rocket_launch</span>
+                        Launch All
+                    </button>
+</div>
+<!-- Workspace Card: Design Inspo -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 flex flex-col shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition-all duration-300 group">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-tertiary-fixed text-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="palette">palette</span>
+</div>
+<h3 class="font-h2 text-h2 text-on-surface">Design Inspo</h3>
+</div>
+<span class="bg-surface-container text-on-surface-variant font-label-caps text-label-caps px-2.5 py-1 rounded-full border border-outline-variant/50">
+                            32 LINKS
+                        </span>
+</div>
+<div class="flex-1 flex flex-col gap-2 mb-6">
+<a class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container-low transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[16px] opacity-70">language</span>
+<span class="font-body-sm text-body-sm truncate">awwwards.com/collections</span>
+</a>
+<a class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container-low transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[16px] opacity-70">draw</span>
+<span class="font-body-sm text-body-sm truncate">Figma Community Resources</span>
+</a>
+<a class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container-low transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[16px] opacity-70">grid_view</span>
+<span class="font-body-sm text-body-sm truncate">Mobbin - UI Patterns</span>
+</a>
+</div>
+<button class="mt-auto w-full bg-surface text-primary border border-outline-variant hover:border-primary/50 hover:bg-primary-fixed/30 font-body-md text-body-md py-2 rounded-lg flex justify-center items-center gap-2 transition-all group-hover:bg-primary group-hover:text-on-primary group-hover:border-primary shadow-sm">
+<span class="material-symbols-outlined text-[18px] group-hover:animate-pulse" data-icon="rocket_launch">rocket_launch</span>
+                        Launch All
+                    </button>
+</div>
+<!-- Workspace Card: Market Research -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 flex flex-col shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition-all duration-300 group">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+</div>
+<h3 class="font-h2 text-h2 text-on-surface">Research</h3>
+</div>
+<span class="bg-surface-container text-on-surface-variant font-label-caps text-label-caps px-2.5 py-1 rounded-full border border-outline-variant/50">
+                            8 LINKS
+                        </span>
+</div>
+<div class="flex-1 flex flex-col gap-2 mb-6">
+<a class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container-low transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[16px] opacity-70">article</span>
+<span class="font-body-sm text-body-sm truncate">Q3 Competitor Analysis Docs</span>
+</a>
+<a class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container-low transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[16px] opacity-70">trending_up</span>
+<span class="font-body-sm text-body-sm truncate">Google Trends: SaaS Metrics</span>
+</a>
+<a class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-container-low transition-colors text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[16px] opacity-70">table</span>
+<span class="font-body-sm text-body-sm truncate">Pricing Strategy Spreadsheet</span>
+</a>
+</div>
+<button class="mt-auto w-full bg-surface text-primary border border-outline-variant hover:border-primary/50 hover:bg-primary-fixed/30 font-body-md text-body-md py-2 rounded-lg flex justify-center items-center gap-2 transition-all group-hover:bg-primary group-hover:text-on-primary group-hover:border-primary shadow-sm">
+<span class="material-symbols-outlined text-[18px] group-hover:animate-pulse" data-icon="rocket_launch">rocket_launch</span>
+                        Launch All
+                    </button>
+</div>
+<!-- Add New Workspace Card (Ghost Card) -->
+<button class="bg-surface-bright rounded-xl border-2 border-dashed border-outline-variant/60 p-5 flex flex-col items-center justify-center text-center hover:border-primary hover:bg-primary-fixed/10 transition-colors duration-200 min-h-[280px] group cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-outline group-hover:text-primary group-hover:bg-surface-container-lowest mb-4 shadow-sm transition-all group-hover:scale-110">
+<span class="material-symbols-outlined text-[24px]" data-icon="add">add</span>
+</div>
+<h3 class="font-h2 text-h2 text-on-surface-variant group-hover:text-primary mb-1">Create Workspace</h3>
+<p class="font-body-sm text-body-sm text-outline px-4">Group related tabs to launch them instantly.</p>
+</button>
+</div>
+</div>
+</main>
+</body></html>

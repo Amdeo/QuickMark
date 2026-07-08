@@ -1,5 +1,5 @@
 import Fuse, { type IFuseOptions } from "fuse.js";
-import type { BookmarkItem, Workspace } from "./types";
+import type { BookmarkItem } from "./types";
 
 const fuseOptions: IFuseOptions<BookmarkItem> = {
   keys: [
@@ -12,87 +12,67 @@ const fuseOptions: IFuseOptions<BookmarkItem> = {
   ignoreLocation: true
 };
 
-function parseQuery(query: string) {
-  const tags: string[] = [];
-  const workspaces: string[] = [];
-  const textTokens: string[] = [];
+export function createBookmarkSearchIndex(items: BookmarkItem[]) {
+  return new Fuse(items, fuseOptions);
+}
 
-  for (const token of query.trim().split(/\s+/)) {
-    if (!token) continue;
-    if (token.startsWith("#") && token.length > 1) {
-      tags.push(token.slice(1).toLowerCase());
-    } else if (token.startsWith("@") && token.length > 1) {
-      workspaces.push(token.slice(1).toLowerCase());
-    } else {
-      textTokens.push(token);
-    }
-  }
+export type SourceFilter = "all" | "bookmark" | "history";
 
-  return {
-    tags,
-    workspaces,
-    textQuery: textTokens.join(" ")
-  };
+export function filterBySource(items: BookmarkItem[], sourceFilter: SourceFilter): BookmarkItem[] {
+  if (sourceFilter === "all") return items;
+  return items.filter((item) => item.source === sourceFilter);
 }
 
 export function searchBookmarks(
   items: BookmarkItem[],
   query: string,
-  workspaces?: Workspace[]
+  fuse = createBookmarkSearchIndex(items),
+  sourceFilter: SourceFilter = "all"
 ): BookmarkItem[] {
-  const { tags, workspaces: workspaceQueries, textQuery } = parseQuery(query);
+  const textQuery = query.trim();
+  const filtered = filterBySource(items, sourceFilter);
+  const sortFn = sourceFilter === "history" ? compareByRecency : compareByUsage;
 
-  let filtered = items;
-
-  if (tags.length > 0) {
-    filtered = filtered.filter((item) =>
-      tags.every((tag) => item.tags.some((t) => t.toLowerCase() === tag))
-    );
+  if (!textQuery) {
+    return [...filtered].sort(sortFn);
   }
 
-  if (workspaceQueries.length > 0 && workspaces) {
-    const workspaceNameMap = new Map<string, string>();
-    for (const ws of workspaces) {
-      workspaceNameMap.set(ws.name.toLowerCase(), ws.id);
-    }
-    const matchingIds = new Set(
-      workspaceQueries
-        .map((name) => workspaceNameMap.get(name))
-        .filter((id): id is string => id !== undefined)
-    );
-    filtered = filtered.filter(
-      (item) => item.workspaceId !== null && matchingIds.has(item.workspaceId)
-    );
-  }
+  const searchFuse = sourceFilter === "all" ? fuse : createBookmarkSearchIndex(filtered);
 
-  if (!textQuery.trim()) {
-    return [...filtered].sort(compareByUsage);
-  }
-
-  return new Fuse(filtered, fuseOptions)
+  return searchFuse
     .search(textQuery)
     .sort((a, b) => {
       const scoreDelta = (a.score ?? 0) - (b.score ?? 0);
       if (Math.abs(scoreDelta) > 0.0001) {
         return scoreDelta;
       }
-
-      return compareByUsage(a.item, b.item);
+      return sortFn(a.item, b.item);
     })
     .map((result) => result.item);
 }
 
+function compareByRecency(a: BookmarkItem, b: BookmarkItem): number {
+  const timeA = a.lastVisitedAt ?? a.createdAt ?? 0;
+  const timeB = b.lastVisitedAt ?? b.createdAt ?? 0;
+  if (timeB !== timeA) return timeB - timeA;
+  return b.visitCount - a.visitCount;
+}
+
+function smartScore(item: BookmarkItem, now: number): number {
+  let score = 0;
+  const daysSinceVisit = (now - (item.lastVisitedAt ?? item.createdAt ?? now)) / 86400000;
+  score += Math.max(0, 100 * Math.exp(-daysSinceVisit / 7));
+  score += Math.log2(item.visitCount + 1) * 30;
+  const daysSinceCreate = (now - (item.createdAt ?? now)) / 86400000;
+  score += Math.max(0, 50 * Math.exp(-daysSinceCreate / 14));
+  return score;
+}
+
 function compareByUsage(a: BookmarkItem, b: BookmarkItem): number {
-  const aVisited = a.lastVisitedAt ?? a.updatedAt;
-  const bVisited = b.lastVisitedAt ?? b.updatedAt;
-
-  if (bVisited !== aVisited) {
-    return bVisited - aVisited;
+  const now = Date.now();
+  const scoreDelta = smartScore(b, now) - smartScore(a, now);
+  if (Math.abs(scoreDelta) > 0.1) {
+    return scoreDelta;
   }
-
-  if (b.visitCount !== a.visitCount) {
-    return b.visitCount - a.visitCount;
-  }
-
   return a.title.localeCompare(b.title);
 }

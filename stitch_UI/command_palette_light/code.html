@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickMark - Command Palette</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#d8e2ff",
+                    "secondary": "#006c49",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb77d",
+                    "on-primary-fixed-variant": "#004395",
+                    "surface-container": "#e9edff",
+                    "tertiary-container": "#b15f00",
+                    "on-tertiary-fixed": "#2f1500",
+                    "secondary-fixed": "#6ffbbe",
+                    "surface-variant": "#dce2f7",
+                    "on-error-container": "#93000a",
+                    "on-primary": "#ffffff",
+                    "primary-container": "#2671e1",
+                    "on-surface": "#141b2b",
+                    "surface-container-high": "#e1e8fd",
+                    "surface-bright": "#f9f9ff",
+                    "inverse-on-surface": "#edf0ff",
+                    "error": "#ba1a1a",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-low": "#f1f3ff",
+                    "on-secondary-fixed": "#002113",
+                    "primary-fixed-dim": "#aec6ff",
+                    "surface-dim": "#d3daef",
+                    "on-secondary-container": "#00714d",
+                    "secondary-container": "#6cf8bb",
+                    "outline": "#727785",
+                    "primary": "#0058be",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed": "#001a42",
+                    "surface-tint": "#005ac3",
+                    "tertiary": "#8d4b00",
+                    "outline-variant": "#c2c6d6",
+                    "inverse-primary": "#aec6ff",
+                    "on-tertiary-container": "#fffbff",
+                    "on-tertiary-fixed-variant": "#6e3900",
+                    "surface": "#f9f9ff",
+                    "background": "#f9f9ff",
+                    "on-primary-container": "#fefcff",
+                    "inverse-surface": "#293040",
+                    "on-background": "#141b2b",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#dce2f7",
+                    "tertiary-fixed": "#ffdcc3",
+                    "on-secondary-fixed-variant": "#005236",
+                    "on-surface-variant": "#424753",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed-dim": "#4edea3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xs": "0.25rem",
+                    "base": "4px",
+                    "md": "1rem",
+                    "sm": "0.5rem",
+                    "element-gap": "8px",
+                    "container-padding": "12px",
+                    "lg": "1.5rem"
+            },
+            "fontFamily": {
+                    "body-sm": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "h2": [
+                            "Inter"
+                    ],
+                    "code": [
+                            "system-ui-mono"
+                    ],
+                    "label-caps": [
+                            "Inter"
+                    ],
+                    "h1": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "body-sm": [
+                            "13px",
+                            {
+                                    "lineHeight": "18px",
+                                    "letterSpacing": "0em",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0em",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "h2": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "code": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0em",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-caps": [
+                            "11px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "h1": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface-container-highest min-h-screen flex items-center justify-center p-md font-body-md text-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- Modal Backdrop / Container -->
+<div class="fixed inset-0 bg-on-surface/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+<!-- Command Palette Modal -->
+<div class="bg-surface-container-lowest w-full max-w-2xl rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.08),_0_1px_4px_rgba(0,0,0,0.04)] border border-outline-variant overflow-hidden flex flex-col h-[600px] max-h-[870px]">
+<!-- Search Header -->
+<div class="flex items-center px-4 border-b border-outline-variant h-14 shrink-0 bg-surface-container-lowest">
+<span class="material-symbols-outlined text-outline mr-3 text-xl" data-icon="search">search</span>
+<input autofocus="" class="flex-1 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline p-0 h-full font-body-md text-body-md outline-none" placeholder="Search bookmarks..." type="text" value="design systems"/>
+<div class="flex items-center gap-1 text-outline font-code text-code bg-surface-container px-2 py-1 rounded">
+<span>⌘</span><span>K</span>
+</div>
+</div>
+<!-- Content Area (Scrollable) -->
+<div class="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-outline-variant scrollbar-track-transparent">
+<!-- Section Header -->
+<div class="px-3 py-2 text-outline font-label-caps text-label-caps uppercase tracking-wider">
+                    Recent &amp; Relevant
+                </div>
+<!-- Result List -->
+<div class="flex flex-col gap-1">
+<!-- Selected Item -->
+<div class="group flex items-start gap-3 p-3 rounded-lg bg-primary-container/10 border border-primary-container/20 cursor-pointer transition-colors relative">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center shrink-0 mt-0.5 border border-outline-variant/50 overflow-hidden">
+<img alt="Figma favicon" class="w-full h-full object-cover" data-alt="A minimalist tech icon representing a design tool, clean geometric shapes on a light background, corporate modern style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJCNKQlDnJPoc5N9CbjWvsUuRUoFBM3EcacvLPGjiMFj_nfI8mh3b-kSIjVkbh6kvBRpSJ7vbwiOYTOnPJWxL0EQroO5Kez4P8VE6lK1d-6sa_0cMbFdQU4-ccHFjQ3hCw_I584MRyW9IgYg-P0lqicilqlBtB6pN86dReuEsDvEk1YZBmPMAW5szAms91zwoDrv0Iw27ncDgKbzmWpdiiwDXZrA-thANjdCUhMrZuJlEsf7l_kTB-QIcoCmOPm3r8KvuPgHulfrQD"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="font-h2 text-h2 text-on-surface truncate">Figma Design Systems: Best Practices</span>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-[10px] font-medium leading-tight shrink-0">UX/UI</span>
+<span class="bg-tertiary-fixed-dim text-on-tertiary-fixed-variant px-2 py-0.5 rounded text-[10px] font-medium leading-tight shrink-0">Guide</span>
+</div>
+<div class="flex items-center gap-2 text-outline font-body-sm text-body-sm truncate mb-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="link">link</span>
+<span class="truncate">figma.com/blog/design-systems</span>
+<span class="mx-1 opacity-50">•</span>
+<span class="shrink-0">2 days ago</span>
+</div>
+<div class="text-on-surface-variant font-body-sm text-body-sm truncate">
+<span class="font-medium mr-1">Snippet:</span> "The core of any scalable UI is a rigid adherence to token hierarchies and..."
+                            </div>
+</div>
+<!-- Action Hints (Visible on Selected) -->
+<div class="hidden group-hover:flex md:flex flex-col gap-1 items-end shrink-0 pl-4 border-l border-primary-container/20 self-stretch justify-center">
+<div class="flex items-center gap-1 text-primary font-code text-[11px] bg-primary-container/10 px-2 py-1 rounded">
+<span>↵</span> <span>Open</span>
+</div>
+<div class="flex items-center gap-1 text-outline font-code text-[11px] px-2 py-1 rounded hover:bg-surface-container transition-colors">
+<span>⌘↵</span> <span>New Tab</span>
+</div>
+</div>
+<!-- Active Indicator Line -->
+<div class="absolute left-0 top-2 bottom-2 w-0.5 bg-primary rounded-r"></div>
+</div>
+<!-- Unselected Item 1 -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-surface-container-low border border-transparent cursor-pointer transition-colors">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center shrink-0 mt-0.5 border border-outline-variant/50 overflow-hidden">
+<img alt="GitHub favicon" class="w-full h-full object-cover" data-alt="A clean, modern logo mark resembling a code repository icon on a white background, minimal corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXu3O4G8CWoKKR0BPXFXHWjPSFvjllWLzoQc6NEaT_c1sruWZfQGm5gFlSOc0FLWBLSq2b0ulApcj--dZLRK84FHPQMZA61RWfpGTC64VoTRR7uIqfwNL66P4RYTpiZ_6ocCB4lrj2S5hDOHjbkXPJad_6jFNtrjvwXqcJTHTLbCUvEBBAOpDe0iYG-tXeuUk-10PsDd-W1S97m1fRQL3vhrhMfwnHPtQ_S4uT8OPwgIO8h03H-a7WBanqdareJDghHJfgvTFOLsWV"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="font-h2 text-h2 text-on-surface truncate">Tailwind CSS v3 Documentation</span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-medium leading-tight shrink-0">CSS</span>
+</div>
+<div class="flex items-center gap-2 text-outline font-body-sm text-body-sm truncate mb-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="link">link</span>
+<span class="truncate">tailwindcss.com/docs</span>
+<span class="mx-1 opacity-50">•</span>
+<span class="shrink-0">1 week ago</span>
+</div>
+<div class="text-on-surface-variant font-body-sm text-body-sm truncate">
+<span class="font-medium mr-1">Snippet:</span> "Utility-first fundamentals for building complex interfaces..."
+                            </div>
+</div>
+<div class="hidden group-hover:flex md:hidden flex-col gap-1 items-end shrink-0 pl-4 self-stretch justify-center">
+<div class="flex items-center gap-1 text-outline font-code text-[11px] bg-surface-container px-2 py-1 rounded">
+<span>↵</span> <span>Open</span>
+</div>
+</div>
+</div>
+<!-- Unselected Item 2 -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-surface-container-low border border-transparent cursor-pointer transition-colors">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center shrink-0 mt-0.5 border border-outline-variant/50 overflow-hidden text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="article">article</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="font-h2 text-h2 text-on-surface truncate">Apple Human Interface Guidelines</span>
+<span class="bg-primary-container/20 text-primary px-2 py-0.5 rounded text-[10px] font-medium leading-tight shrink-0">Reference</span>
+</div>
+<div class="flex items-center gap-2 text-outline font-body-sm text-body-sm truncate mb-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="link">link</span>
+<span class="truncate">developer.apple.com/design</span>
+<span class="mx-1 opacity-50">•</span>
+<span class="shrink-0">1 month ago</span>
+</div>
+<div class="text-on-surface-variant font-body-sm text-body-sm truncate">
+<span class="font-medium mr-1">Note:</span> "Review depth and elevation principles for the new project."
+                            </div>
+</div>
+</div>
+<!-- Unselected Item 3 -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-surface-container-low border border-transparent cursor-pointer transition-colors">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center shrink-0 mt-0.5 border border-outline-variant/50 overflow-hidden text-outline">
+<span class="material-symbols-outlined text-lg" data-icon="language">language</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="font-h2 text-h2 text-on-surface truncate">Material Symbols Explorer</span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-medium leading-tight shrink-0">Icons</span>
+</div>
+<div class="flex items-center gap-2 text-outline font-body-sm text-body-sm truncate mb-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="link">link</span>
+<span class="truncate">fonts.google.com/icons</span>
+<span class="mx-1 opacity-50">•</span>
+<span class="shrink-0">Just now</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Keyboard Legend / Footer -->
+<div class="bg-surface-container-low border-t border-outline-variant px-4 py-2 flex flex-wrap items-center justify-between gap-4 shrink-0 font-code text-code text-outline">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<span class="bg-surface-container border border-outline-variant/50 rounded px-1 text-[10px]">↑↓</span>
+<span>Navigate</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="bg-surface-container border border-outline-variant/50 rounded px-1 text-[10px]">↵</span>
+<span>Open</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="bg-surface-container border border-outline-variant/50 rounded px-1 text-[10px]">⌘↵</span>
+<span>New Tab</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<span class="bg-surface-container border border-outline-variant/50 rounded px-1 text-[10px]">E</span>
+<span>Edit</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="bg-surface-container border border-outline-variant/50 rounded px-1 text-[10px]">⌫</span>
+<span>Delete</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

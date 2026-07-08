@@ -1,74 +1,151 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { BookmarkItem, Workspace } from "../domain/types";
-import { searchBookmarks } from "../domain/search";
-import { createBookmarkRepository } from "../repositories/bookmarkRepository";
-import { createWorkspaceRepository } from "../repositories/workspaceRepository";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { BookmarkItem } from "../domain/types";
+import { createBookmarkSearchIndex, searchBookmarks } from "../domain/search";
+import type { SourceFilter } from "../domain/search";
+import { BOOKMARK_CACHE_KEY } from "../background/cacheKeys";
+import type { BookmarkResult } from "../background/bookmarkCache";
 
-const repository = createBookmarkRepository();
-const workspaceRepository = createWorkspaceRepository();
+type BookmarkState = {
+  items: BookmarkItem[];
+  folderPaths: Map<string, string[]>;
+};
 
-export function useBookmarks(query: string) {
+type RuntimeClient = {
+  sendMessage: (message: { type: "QUICKMARK_GET_BOOKMARKS"; preferFresh?: boolean }) => Promise<
+    | { results: BookmarkResult[]; cached?: boolean; refreshing?: boolean }
+    | { error: string }
+  >;
+};
+
+type StorageAreaLike = {
+  get: (key: string) => Promise<Record<string, unknown>>;
+};
+
+type StorageChangeLike = Record<string, { newValue?: unknown }>;
+
+type GetBookmarksOptions = {
+  preferFresh?: boolean;
+};
+
+export async function getBookmarksFromRuntime(
+  runtime: RuntimeClient,
+  options: GetBookmarksOptions = {}
+) {
+  const response = await runtime.sendMessage({
+    type: "QUICKMARK_GET_BOOKMARKS",
+    preferFresh: options.preferFresh,
+  });
+  if (response && typeof response === "object" && "error" in response) {
+    throw new Error(String(response.error));
+  }
+  const state = bookmarkResultsToState(response.results);
+  return { ...state, cached: Boolean(response.cached), refreshing: Boolean(response.refreshing) };
+}
+
+export function bookmarkResultsToState(results: BookmarkResult[]): BookmarkState {
+  const items: BookmarkItem[] = [];
+  const folderPaths = new Map<string, string[]>();
+  for (const r of results) {
+    items.push(r.item);
+    folderPaths.set(r.item.id, r.folderPath);
+  }
+  return { items, folderPaths };
+}
+
+export function getCachedBookmarkResultsFromChange(changes: StorageChangeLike): BookmarkResult[] | undefined {
+  const nextValue = changes[BOOKMARK_CACHE_KEY]?.newValue;
+  return Array.isArray(nextValue) ? nextValue as BookmarkResult[] : undefined;
+}
+
+async function getBookmarksFromStorage(storage: StorageAreaLike): Promise<BookmarkState | undefined> {
+  const stored = await storage.get(BOOKMARK_CACHE_KEY);
+  const cachedResults = stored[BOOKMARK_CACHE_KEY];
+  if (!Array.isArray(cachedResults)) {
+    return undefined;
+  }
+  return bookmarkResultsToState(cachedResults as BookmarkResult[]);
+}
+
+export function useBookmarks(query: string, sourceFilter: SourceFilter = "all") {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [folderPaths, setFolderPaths] = useState<Map<string, string[]>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | undefined>();
+  const bookmarkCountRef = useRef(0);
 
-  const refresh = useCallback(async () => {
-    const [items, wsList] = await Promise.all([
-      repository.list(),
-      workspaceRepository.list()
-    ]);
-    setBookmarks(items);
-    setWorkspaces(wsList);
-    setIsLoading(false);
+  const applyBookmarkState = useCallback((state: BookmarkState) => {
+    bookmarkCountRef.current = state.items.length;
+    setBookmarks(state.items);
+    setFolderPaths(state.folderPaths);
   }, []);
+
+  const refresh = useCallback(async (options: GetBookmarksOptions = {}) => {
+    setIsLoading((loading) => options.preferFresh || bookmarkCountRef.current === 0 ? true : loading);
+    setError(undefined);
+    try {
+      const response = await getBookmarksFromRuntime(chrome.runtime, options);
+      applyBookmarkState(response);
+    } catch (err) {
+      if (bookmarkCountRef.current === 0) {
+        setBookmarks([]);
+        setFolderPaths(new Map());
+      }
+      setError(err instanceof Error ? err.message : "无法加载书签和历史记录。");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [applyBookmarkState]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
 
-  const results = useMemo(
-    () => searchBookmarks(bookmarks, query, workspaces),
-    [bookmarks, query, workspaces]
-  );
+    async function loadCachedThenRefresh() {
+      try {
+        const cached = await getBookmarksFromStorage(chrome.storage.local);
+        if (!cancelled && cached) {
+          applyBookmarkState(cached);
+          setIsLoading(false);
+        }
+      } catch {
+        // Background refresh still provides a fallback.
+      }
+      if (!cancelled) {
+        void refresh();
+      }
+    }
 
-  const remove = useCallback(async (id: string) => {
-    await repository.remove(id);
-    setBookmarks((items) => items.filter((item) => item.id !== id));
-  }, []);
+    void loadCachedThenRefresh();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyBookmarkState, refresh]);
+
+  useEffect(() => {
+    const listener = (changes: StorageChangeLike, areaName: string) => {
+      if (areaName !== "local") return;
+      const results = getCachedBookmarkResultsFromChange(changes);
+      if (!results) return;
+      applyBookmarkState(bookmarkResultsToState(results));
+      setIsLoading(false);
+      setError(undefined);
+    };
+
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, [applyBookmarkState]);
+
+  const fuse = useMemo(() => createBookmarkSearchIndex(bookmarks), [bookmarks]);
+  const results = useMemo(() => searchBookmarks(bookmarks, query, fuse, sourceFilter), [bookmarks, query, fuse, sourceFilter]);
 
   const markVisited = useCallback(async (id: string) => {
-    const item = await repository.markVisited(id);
-    if (!item) {
-      return;
-    }
-
-    setBookmarks((items) => items.map((current) => (current.id === id ? item : current)));
+    setBookmarks((items) =>
+      items.map((item) =>
+        item.id === id
+          ? { ...item, visitCount: item.visitCount + 1, lastVisitedAt: Date.now() }
+          : item
+      )
+    );
   }, []);
 
-  const toggleFavorite = useCallback(async (id: string) => {
-    const item = bookmarks.find((i) => i.id === id);
-    if (!item) return;
-    const updated = await repository.update(id, { isFavorite: !item.isFavorite });
-    if (updated) {
-      setBookmarks((prev) => prev.map((current) => (current.id === id ? updated : current)));
-    }
-  }, [bookmarks]);
-
-  const toggleUnread = useCallback(async (id: string) => {
-    const item = bookmarks.find((i) => i.id === id);
-    if (!item) return;
-    const updated = await repository.update(id, { isUnread: !item.isUnread });
-    if (updated) {
-      setBookmarks((prev) => prev.map((current) => (current.id === id ? updated : current)));
-    }
-  }, [bookmarks]);
-
-  const markRead = useCallback(async (id: string) => {
-    const updated = await repository.update(id, { isUnread: false });
-    if (updated) {
-      setBookmarks((prev) => prev.map((current) => (current.id === id ? updated : current)));
-    }
-  }, []);
-
-  return { bookmarks, results, isLoading, refresh, remove, markVisited, toggleFavorite, toggleUnread, markRead };
+  return { bookmarks, results, folderPaths, isLoading, error, refresh, markVisited };
 }

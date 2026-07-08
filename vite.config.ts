@@ -8,11 +8,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        search: "search.html",
         background: "src/background/index.ts",
-        workspaces: "workspaces.html",
-        dashboard: "dashboard.html",
-        settings: "settings.html",
         popup: "popup.html"
       },
       output: {
