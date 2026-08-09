@@ -215,15 +215,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
         isGrouped && !isExpanded
           ? group.items.slice(0, DEFAULT_ITEMS_PER_DOMAIN)
           : group.items;
-      const seenTitles = new Set<string>();
-      const entries = items.map((item) => {
-        // Titles repeated inside one domain group carry no information;
-        // such rows are rendered with their compact URL as the primary
-        // label instead (see BookmarkRow).
-        const duplicateTitle = seenTitles.has(item.title);
-        seenTitles.add(item.title);
-        return { item, flatIndex: flatIndex++, duplicateTitle };
-      });
+      const entries = items.map((item) => ({ item, flatIndex: flatIndex++ }));
       return {
         group,
         isGrouped,
@@ -621,7 +613,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                     onToggle={() => toggleDomain(group.domain)}
                   />
                 ) : null}
-                {entries.map(({ item, flatIndex, duplicateTitle }) => (
+                {entries.map(({ item, flatIndex }) => (
                   <BookmarkRow
                     key={item.id}
                     item={item}
@@ -631,7 +623,6 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                     isSelected={flatIndex === selectedIndex}
                     onMouseEnter={() => setSelectedIndex(flatIndex)}
                     onOpen={(newTab) => void openSelected(newTab)}
-                    duplicateTitle={duplicateTitle}
                   />
                 ))}
                 {hiddenCount > 0 ? (
@@ -793,7 +784,6 @@ function BookmarkRow({
   isSelected,
   onMouseEnter,
   onOpen,
-  duplicateTitle = false,
 }: {
   item: BookmarkItem;
   folderPath: string[];
@@ -802,7 +792,6 @@ function BookmarkRow({
   isSelected: boolean;
   onMouseEnter: () => void;
   onOpen: (newTab: boolean) => void;
-  duplicateTitle?: boolean;
 }) {
   const [imgSrc, setImgSrc] = useState(item.favicon);
   const displayFolderPath = getDisplayFolderPath(folderPath);
@@ -865,18 +854,23 @@ function BookmarkRow({
         </div>
       </div>
 
-      {/* Title + URL */}
+      {/* URL (primary) + Title (secondary) */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          {duplicateTitle ? (
-            <span className="truncate font-mono text-[13px] font-medium leading-5 text-primary" title={item.url}>
-              <HighlightedText text={compactUrl(item.url)} query={query} />
+        <div className="flex items-center gap-1.5">
+          <Icon name="link" size={12} className="shrink-0 text-primary/70" />
+          <span className="truncate font-mono text-[13px] font-medium leading-5 text-primary" title={item.url}>
+            <HighlightedText text={compactUrl(item.url)} query={query} />
+          </span>
+          {item.source === "history" && item.lastVisitedAt ? (
+            <span className="flex-none whitespace-nowrap text-[11px] text-outline/70">
+              {formatRelativeTime(item.lastVisitedAt)}
             </span>
-          ) : (
-            <span className="truncate text-[14px] font-semibold leading-5 tracking-tight text-on-surface">
-              <HighlightedText text={item.title} query={query} />
-            </span>
-          )}
+          ) : null}
+        </div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-4 text-outline">
+          <span className="truncate">
+            <HighlightedText text={item.title} query={query} />
+          </span>
           {item.source === "history" && (
             <span className="shrink-0 rounded-md bg-tertiary-fixed/70 px-1.5 py-0.5 text-[10px] font-medium text-on-tertiary-fixed">
               历史
@@ -891,27 +885,6 @@ function BookmarkRow({
             </span>
           )}
         </div>
-        {duplicateTitle ? (
-          <div className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-4 text-outline">
-            {item.source === "history" && item.lastVisitedAt ? (
-              <span className="whitespace-nowrap text-outline/70">
-                {formatRelativeTime(item.lastVisitedAt)}
-              </span>
-            ) : null}
-          </div>
-        ) : (
-          <div className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-4 text-outline">
-            <Icon name="link" size={11} className="shrink-0 text-outline/70" />
-            <span className="truncate" title={item.url}>
-              <HighlightedText text={compactUrl(item.url)} query={query} />
-            </span>
-            {item.source === "history" && item.lastVisitedAt ? (
-              <span className="flex-none whitespace-nowrap text-outline/70">
-                {formatRelativeTime(item.lastVisitedAt)}
-              </span>
-            ) : null}
-          </div>
-        )}
       </div>
 
       {/* Right Action Area */}

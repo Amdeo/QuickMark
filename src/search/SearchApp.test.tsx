@@ -257,11 +257,12 @@ test("SearchApp shows the compact URL for duplicate titles inside a domain group
   const { SearchApp } = await import("./SearchApp");
   const html = renderToStaticMarkup(<SearchApp />);
 
-  // First row keeps its title, the duplicate shows the compact URL instead,
-  // and a different title renders normally.
-  expect(html).toContain(">Kimi<");
+  // Every row leads with its compact URL (the distinguishable info);
+  // titles stay as a secondary line, duplicates included.
+  expect(html).toContain(">kimi.com<");
   expect(html).toContain(">kimi.com/settings<");
-  expect(html).toContain('title="https://www.kimi.com/settings"');
-  expect(html).toContain(">Kimi Chat<");
   expect(html).toContain(">kimi.com/chat<");
+  expect(html).toContain('title="https://www.kimi.com/settings"');
+  expect(html).toContain(">Kimi<");
+  expect(html).toContain(">Kimi Chat<");
 });
