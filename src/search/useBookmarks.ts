@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BookmarkItem } from "../domain/types";
 import { createBookmarkSearchIndex, searchBookmarks } from "../domain/search";
-import type { SourceFilter } from "../domain/search";
+import type { SortMode, SourceFilter, TimeFilter } from "../domain/search";
 import { BOOKMARK_CACHE_KEY } from "../background/cacheKeys";
 import type { BookmarkResult } from "../background/bookmarkCache";
 
@@ -66,7 +66,12 @@ async function getBookmarksFromStorage(storage: StorageAreaLike): Promise<Bookma
   return bookmarkResultsToState(cachedResults as BookmarkResult[]);
 }
 
-export function useBookmarks(query: string, sourceFilter: SourceFilter = "all") {
+export function useBookmarks(
+  query: string,
+  sourceFilter: SourceFilter = "all",
+  timeFilter: TimeFilter = "all",
+  sortMode: SortMode = "smart"
+) {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   const [folderPaths, setFolderPaths] = useState<Map<string, string[]>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
@@ -135,7 +140,10 @@ export function useBookmarks(query: string, sourceFilter: SourceFilter = "all") 
   }, [applyBookmarkState]);
 
   const fuse = useMemo(() => createBookmarkSearchIndex(bookmarks), [bookmarks]);
-  const results = useMemo(() => searchBookmarks(bookmarks, query, fuse, sourceFilter), [bookmarks, query, fuse, sourceFilter]);
+  const results = useMemo(
+    () => searchBookmarks(bookmarks, query, fuse, sourceFilter, timeFilter, sortMode),
+    [bookmarks, query, fuse, sourceFilter, timeFilter, sortMode]
+  );
 
   const markVisited = useCallback(async (id: string) => {
     setBookmarks((items) =>

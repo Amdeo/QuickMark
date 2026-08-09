@@ -23,6 +23,34 @@ export function filterBySource(items: BookmarkItem[], sourceFilter: SourceFilter
   return items.filter((item) => item.source === sourceFilter);
 }
 
+export type TimeFilter = "all" | "today" | "week" | "month";
+
+/**
+ * Start-of-period boundary (local time) for a time filter:
+ * today = midnight, week = Monday 00:00, month = the 1st 00:00.
+ */
+function getTimeFilterStart(now: number, timeFilter: TimeFilter): number {
+  const date = new Date(now);
+  date.setHours(0, 0, 0, 0);
+  if (timeFilter === "week") {
+    // getDay(): 0 = Sunday, 6 = Saturday; (day + 6) % 7 days back reaches Monday.
+    date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  } else if (timeFilter === "month") {
+    date.setDate(1);
+  }
+  return date.getTime();
+}
+
+/**
+ * Keep items whose last visit (or creation) time falls inside the period.
+ * Items with no timestamp are only included when timeFilter is "all".
+ */
+export function filterByTime(items: BookmarkItem[], timeFilter: TimeFilter, now = Date.now()): BookmarkItem[] {
+  if (timeFilter === "all") return items;
+  const start = getTimeFilterStart(now, timeFilter);
+  return items.filter((item) => (item.lastVisitedAt ?? item.createdAt ?? 0) >= start);
+}
+
 export type ResultGroup = {
   domain: string;
   items: BookmarkItem[];
@@ -50,24 +78,91 @@ export function groupByDomain(results: BookmarkItem[]): ResultGroup[] {
   return groups;
 }
 
+export type SortMode = "smart" | "recent" | "frequent" | "title" | "created" | "relevance";
+
+/**
+ * A home page is a URL whose path is empty or just "/" —
+ * e.g. https://example.com or https://example.com/?ref=x.
+ */
+export function isHomeUrl(url: string): boolean {
+  try {
+    const pathname = new URL(url).pathname;
+    return pathname === "" || pathname === "/";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Wrap a sort function so official home pages of a site always rank
+ * before its sub-pages, no matter which sort mode is active.
+ */
+function withHomeFirst(sortFn: (a: BookmarkItem, b: BookmarkItem) => number) {
+  return (a: BookmarkItem, b: BookmarkItem): number => {
+    const aHome = isHomeUrl(a.url) ? 1 : 0;
+    const bHome = isHomeUrl(b.url) ? 1 : 0;
+    if (aHome !== bHome) return bHome - aHome;
+    return sortFn(a, b);
+  };
+}
+
+function compareByTitle(a: BookmarkItem, b: BookmarkItem): number {
+  return a.title.localeCompare(b.title);
+}
+
+function compareByCreated(a: BookmarkItem, b: BookmarkItem): number {
+  const timeA = a.createdAt ?? 0;
+  const timeB = b.createdAt ?? 0;
+  if (timeB !== timeA) return timeB - timeA;
+  return b.visitCount - a.visitCount;
+}
+
+/**
+ * Tie-breaker / no-query sort function for a sort mode.
+ * "smart" and "relevance" both fall back to the existing automatic
+ * choice: history by recency, everything else by usage.
+ */
+function getSortFn(sortMode: SortMode, sourceFilter: SourceFilter): (a: BookmarkItem, b: BookmarkItem) => number {
+  switch (sortMode) {
+    case "recent":
+      return withHomeFirst(compareByRecency);
+    case "frequent":
+      return withHomeFirst(compareByUsage);
+    case "title":
+      return withHomeFirst(compareByTitle);
+    case "created":
+      return withHomeFirst(compareByCreated);
+    case "smart":
+    case "relevance":
+      return withHomeFirst(sourceFilter === "history" ? compareByRecency : compareByUsage);
+  }
+}
+
 export function searchBookmarks(
   items: BookmarkItem[],
   query: string,
   fuse = createBookmarkSearchIndex(items),
-  sourceFilter: SourceFilter = "all"
+  sourceFilter: SourceFilter = "all",
+  timeFilter: TimeFilter = "all",
+  sortMode: SortMode = "smart"
 ): BookmarkItem[] {
   const textQuery = query.trim();
-  const filtered = filterBySource(items, sourceFilter);
-  const sortFn = sourceFilter === "history" ? compareByRecency : compareByUsage;
+  const filtered = filterByTime(filterBySource(items, sourceFilter), timeFilter);
+  const sortFn = getSortFn(sortMode, sourceFilter);
 
   if (!textQuery) {
     return [...filtered].sort(sortFn);
   }
 
-  const searchFuse = sourceFilter === "all" ? fuse : createBookmarkSearchIndex(filtered);
+  const needsCustomIndex = sourceFilter !== "all" || timeFilter !== "all";
+  const searchFuse = needsCustomIndex ? createBookmarkSearchIndex(filtered) : fuse;
 
-  return searchFuse
-    .search(textQuery)
+  const matches = searchFuse.search(textQuery);
+  if (sortMode === "relevance") {
+    return matches.map((result) => result.item);
+  }
+
+  return matches
     .sort((a, b) => {
       const scoreDelta = (a.score ?? 0) - (b.score ?? 0);
       if (Math.abs(scoreDelta) > 0.0001) {

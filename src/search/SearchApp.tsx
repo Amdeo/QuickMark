@@ -4,14 +4,29 @@ import { Icon } from "../components/Icon";
 import { getExtensionFaviconUrl } from "../adapters/favicon";
 import { useBookmarks } from "./useBookmarks";
 import { getDisplayFolderPath, getNextVisibleResultCount, isNearScrollBottom, splitQueryMatch, formatRelativeTime, compactUrl } from "./display";
-import { groupByDomain, type SourceFilter } from "../domain/search";
+import { groupByDomain, type SortMode, type SourceFilter, type TimeFilter } from "../domain/search";
 
-const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
 const HISTORY_KEY = "quickmark-search-history";
 const THEME_KEY = "quickmark-theme";
 const MAX_HISTORY = 5;
 const RESULT_PAGE_SIZE = 50;
 const DEFAULT_ITEMS_PER_DOMAIN = 3;
+
+const TIME_FILTERS: Array<{ value: TimeFilter; label: string }> = [
+  { value: "all", label: "全部时间" },
+  { value: "today", label: "今天" },
+  { value: "week", label: "本周" },
+  { value: "month", label: "本月" },
+];
+
+const SORT_MODES: Array<{ value: SortMode; label: string }> = [
+  { value: "smart", label: "智能排序" },
+  { value: "recent", label: "最近访问" },
+  { value: "frequent", label: "使用频率" },
+  { value: "title", label: "标题 A-Z" },
+  { value: "created", label: "创建时间" },
+  { value: "relevance", label: "相关度优先" },
+];
 
 type ThemePreference = "light" | "dark" | "system";
 
@@ -117,10 +132,14 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   const [visibleResultCount, setVisibleResultCount] = useState(RESULT_PAGE_SIZE);
   const [themePref, setThemePref] = useState<ThemePreference>(getThemePreference);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("smart");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<BookmarkItem | undefined>(undefined);
   const [expandedDomains, setExpandedDomains] = useState<ReadonlySet<string>>(new Set());
-  const { results, isLoading, error, folderPaths, refresh, markVisited } = useBookmarks(query, sourceFilter);
+  const { results, isLoading, error, folderPaths, refresh, markVisited } = useBookmarks(query, sourceFilter, timeFilter, sortMode);
 
   const effectiveTheme = getEffectiveTheme(themePref);
 
@@ -131,7 +150,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   useEffect(() => {
     setSelectedIndex(0);
     setVisibleResultCount(RESULT_PAGE_SIZE);
-  }, [query, sourceFilter]);
+  }, [query, sourceFilter, timeFilter, sortMode]);
 
   useEffect(() => {
     setVisibleResultCount((count) => Math.min(Math.max(count, RESULT_PAGE_SIZE), results.length || RESULT_PAGE_SIZE));
@@ -167,6 +186,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     if (error) return "加载失败";
     if (!results.length) {
       if (query) return "无结果";
+      if (timeFilter !== "all") return "该时间范围无记录";
       if (sourceFilter === "bookmark") return "无书签";
       if (sourceFilter === "history") return "无历史记录";
       return "无书签";
@@ -177,7 +197,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     if (bookmarkCount > 0) parts.push(`书签 ${bookmarkCount}`);
     if (historyCount > 0) parts.push(`历史 ${historyCount}`);
     return parts.join(" · ");
-  }, [isLoading, error, query, results.length, bookmarkCount, historyCount, sourceFilter]);
+  }, [isLoading, error, query, results.length, bookmarkCount, historyCount, sourceFilter, timeFilter]);
 
   const loadedResults = useMemo(
     () => results.slice(0, visibleResultCount),
@@ -195,7 +215,15 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
         isGrouped && !isExpanded
           ? group.items.slice(0, DEFAULT_ITEMS_PER_DOMAIN)
           : group.items;
-      const entries = items.map((item) => ({ item, flatIndex: flatIndex++ }));
+      const seenTitles = new Set<string>();
+      const entries = items.map((item) => {
+        // Titles repeated inside one domain group carry no information;
+        // such rows are rendered with their compact URL as the primary
+        // label instead (see BookmarkRow).
+        const duplicateTitle = seenTitles.has(item.title);
+        seenTitles.add(item.title);
+        return { item, flatIndex: flatIndex++, duplicateTitle };
+      });
       return {
         group,
         isGrouped,
@@ -290,11 +318,30 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   }
 
   useEffect(() => {
+    if (!sortMenuOpen) return;
+    function onPointerDown(event: MouseEvent | TouchEvent) {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+        setSortMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [sortMenuOpen]);
+
+  useEffect(() => {
     function onEscapeCapture(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       if (event.isComposing || event.keyCode === 229) return;
       event.preventDefault();
       event.stopImmediatePropagation();
+      if (sortMenuOpen) {
+        setSortMenuOpen(false);
+        return;
+      }
       if (query) {
         setQuery("");
       } else {
@@ -303,7 +350,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     }
     document.addEventListener("keydown", onEscapeCapture, true);
     return () => document.removeEventListener("keydown", onEscapeCapture, true);
-  }, [query, onClose]);
+  }, [query, onClose, sortMenuOpen]);
 
   return (
     <main
@@ -404,8 +451,8 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
           </span>
         </div>
 
-        {/* Source Filter */}
-        <div className="flex shrink-0 items-center gap-2 border-b border-outline-variant/40 bg-surface-container-lowest/80 px-4 py-1.5">
+        {/* Source / Time Filter & Sort */}
+        <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-outline-variant/40 bg-surface-container-lowest/80 px-4 py-1.5">
           {(["all", "bookmark", "history"] as SourceFilter[]).map((filter) => (
             <button
               key={filter}
@@ -421,6 +468,66 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
               {filter === "all" ? "全部" : filter === "bookmark" ? "书签" : "历史"}
             </button>
           ))}
+          <span className="mx-0.5 h-4 w-px shrink-0 bg-outline-variant/50" aria-hidden />
+          {TIME_FILTERS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTimeFilter(value)}
+              className={[
+                "h-7 cursor-pointer rounded-lg px-2.5 text-[12px] font-medium transition-colors",
+                timeFilter === value
+                  ? "bg-surface-container-high text-on-surface"
+                  : "text-outline hover:bg-surface-container hover:text-on-surface"
+              ].join(" ")}
+            >
+              {label}
+            </button>
+          ))}
+          <div className="relative ml-auto shrink-0" ref={sortMenuRef}>
+            <button
+              type="button"
+              onClick={() => setSortMenuOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={sortMenuOpen}
+              className="flex h-7 cursor-pointer items-center gap-1 rounded-lg px-2 text-[12px] font-medium text-outline transition-colors hover:bg-surface-container hover:text-on-surface"
+            >
+              <Icon name="sort" size={13} className="shrink-0" />
+              <span>{SORT_MODES.find((m) => m.value === sortMode)?.label ?? "智能排序"}</span>
+              <Icon
+                name="expand_more"
+                size={13}
+                className={["shrink-0 transition-transform", sortMenuOpen ? "rotate-180" : ""].join(" ")}
+              />
+            </button>
+            {sortMenuOpen ? (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-20 mt-1.5 w-36 rounded-lg border border-outline-variant/40 bg-surface-container p-1 shadow-xl"
+              >
+                {SORT_MODES.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={sortMode === value}
+                    onClick={() => {
+                      setSortMode(value);
+                      setSortMenuOpen(false);
+                    }}
+                    className={[
+                      "flex h-7 w-full cursor-pointer items-center rounded-md px-2 text-left text-[12px] transition-colors",
+                      sortMode === value
+                        ? "bg-primary/15 font-medium text-primary"
+                        : "text-outline hover:bg-surface-container-high hover:text-on-surface"
+                    ].join(" ")}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {/* Content Area */}
@@ -514,7 +621,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                     onToggle={() => toggleDomain(group.domain)}
                   />
                 ) : null}
-                {entries.map(({ item, flatIndex }) => (
+                {entries.map(({ item, flatIndex, duplicateTitle }) => (
                   <BookmarkRow
                     key={item.id}
                     item={item}
@@ -524,6 +631,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                     isSelected={flatIndex === selectedIndex}
                     onMouseEnter={() => setSelectedIndex(flatIndex)}
                     onOpen={(newTab) => void openSelected(newTab)}
+                    duplicateTitle={duplicateTitle}
                   />
                 ))}
                 {hiddenCount > 0 ? (
@@ -685,6 +793,7 @@ function BookmarkRow({
   isSelected,
   onMouseEnter,
   onOpen,
+  duplicateTitle = false,
 }: {
   item: BookmarkItem;
   folderPath: string[];
@@ -693,6 +802,7 @@ function BookmarkRow({
   isSelected: boolean;
   onMouseEnter: () => void;
   onOpen: (newTab: boolean) => void;
+  duplicateTitle?: boolean;
 }) {
   const [imgSrc, setImgSrc] = useState(item.favicon);
   const displayFolderPath = getDisplayFolderPath(folderPath);
@@ -758,9 +868,15 @@ function BookmarkRow({
       {/* Title + URL */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate text-[14px] font-semibold leading-5 tracking-tight text-on-surface">
-            <HighlightedText text={item.title} query={query} />
-          </span>
+          {duplicateTitle ? (
+            <span className="truncate font-mono text-[13px] font-medium leading-5 text-primary" title={item.url}>
+              <HighlightedText text={compactUrl(item.url)} query={query} />
+            </span>
+          ) : (
+            <span className="truncate text-[14px] font-semibold leading-5 tracking-tight text-on-surface">
+              <HighlightedText text={item.title} query={query} />
+            </span>
+          )}
           {item.source === "history" && (
             <span className="shrink-0 rounded-md bg-tertiary-fixed/70 px-1.5 py-0.5 text-[10px] font-medium text-on-tertiary-fixed">
               历史
@@ -775,17 +891,27 @@ function BookmarkRow({
             </span>
           )}
         </div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-4 text-outline">
-          <Icon name="link" size={11} className="shrink-0 text-outline/70" />
-          <span className="truncate" title={item.url}>
-            <HighlightedText text={compactUrl(item.url)} query={query} />
-          </span>
-          {item.source === "history" && item.lastVisitedAt ? (
-            <span className="flex-none whitespace-nowrap text-outline/70">
-              {formatRelativeTime(item.lastVisitedAt)}
+        {duplicateTitle ? (
+          <div className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-4 text-outline">
+            {item.source === "history" && item.lastVisitedAt ? (
+              <span className="whitespace-nowrap text-outline/70">
+                {formatRelativeTime(item.lastVisitedAt)}
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <div className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-4 text-outline">
+            <Icon name="link" size={11} className="shrink-0 text-outline/70" />
+            <span className="truncate" title={item.url}>
+              <HighlightedText text={compactUrl(item.url)} query={query} />
             </span>
-          ) : null}
-        </div>
+            {item.source === "history" && item.lastVisitedAt ? (
+              <span className="flex-none whitespace-nowrap text-outline/70">
+                {formatRelativeTime(item.lastVisitedAt)}
+              </span>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* Right Action Area */}

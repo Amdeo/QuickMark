@@ -169,3 +169,99 @@ test("SearchApp collapses same-domain results with an expand button", async () =
   expect(html).toContain("Kimi 2");
   expect(html).not.toContain("Kimi 3");
 });
+
+test("SearchApp renders time filter chips with '全部时间' selected by default", async () => {
+  const bookmark: BookmarkItem = {
+    id: "bookmark-1",
+    title: "Example Docs",
+    url: "https://example.com/docs",
+    domain: "example.com",
+    favicon: "",
+    visitCount: 3,
+    source: "bookmark",
+  };
+
+  vi.stubGlobal("navigator", { platform: "MacIntel" });
+  vi.doMock("./useBookmarks", () => ({
+    useBookmarks: () => ({
+      results: [bookmark],
+      isLoading: false,
+      error: undefined,
+      folderPaths: new Map(),
+      refresh: vi.fn(),
+      markVisited: vi.fn(),
+    }),
+  }));
+
+  const { SearchApp } = await import("./SearchApp");
+  const html = renderToStaticMarkup(<SearchApp />);
+
+  expect(html).toContain("全部时间");
+  expect(html).toContain("今天");
+  expect(html).toContain("本周");
+  expect(html).toContain("本月");
+});
+
+test("SearchApp renders the sort control closed with the smart mode label", async () => {
+  const bookmark: BookmarkItem = {
+    id: "bookmark-1",
+    title: "Example Docs",
+    url: "https://example.com/docs",
+    domain: "example.com",
+    favicon: "",
+    visitCount: 3,
+    source: "bookmark",
+  };
+
+  vi.stubGlobal("navigator", { platform: "MacIntel" });
+  vi.doMock("./useBookmarks", () => ({
+    useBookmarks: () => ({
+      results: [bookmark],
+      isLoading: false,
+      error: undefined,
+      folderPaths: new Map(),
+      refresh: vi.fn(),
+      markVisited: vi.fn(),
+    }),
+  }));
+
+  const { SearchApp } = await import("./SearchApp");
+  const html = renderToStaticMarkup(<SearchApp />);
+
+  expect(html).toContain("智能排序");
+  expect(html).toContain('aria-haspopup="menu"');
+  // The menu itself stays closed: sort options are not rendered.
+  expect(html).not.toContain("最近访问");
+  expect(html).not.toContain("标题 A-Z");
+});
+
+test("SearchApp shows the compact URL for duplicate titles inside a domain group", async () => {
+  const results: BookmarkItem[] = [
+    { id: "h0", title: "Kimi", url: "https://www.kimi.com/", domain: "kimi.com", favicon: "", visitCount: 5, source: "history", lastVisitedAt: 3000 },
+    { id: "h1", title: "Kimi", url: "https://www.kimi.com/settings", domain: "kimi.com", favicon: "", visitCount: 4, source: "history", lastVisitedAt: 2000 },
+    { id: "h2", title: "Kimi Chat", url: "https://www.kimi.com/chat", domain: "kimi.com", favicon: "", visitCount: 3, source: "history", lastVisitedAt: 1000 },
+  ];
+
+  vi.stubGlobal("navigator", { platform: "MacIntel" });
+  vi.doMock("./useBookmarks", () => ({
+    useBookmarks: () => ({
+      results,
+      isLoading: false,
+      error: undefined,
+      folderPaths: new Map(),
+      refresh: vi.fn(),
+      markVisited: vi.fn(),
+    }),
+  }));
+
+  const { SearchApp } = await import("./SearchApp");
+  const html = renderToStaticMarkup(<SearchApp />);
+
+  // First row keeps its title, the duplicate shows the compact URL instead,
+  // and a different title renders normally.
+  expect(html).toContain(">Kimi<");
+  expect(html).toContain(">kimi.com/settings<");
+  expect(html).toContain('title="https://www.kimi.com/settings"');
+  expect(html).toContain(">Kimi Chat<");
+  expect(html).toContain(">kimi.com/chat<");
+});
