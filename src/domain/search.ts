@@ -23,6 +23,33 @@ export function filterBySource(items: BookmarkItem[], sourceFilter: SourceFilter
   return items.filter((item) => item.source === sourceFilter);
 }
 
+export type ResultGroup = {
+  domain: string;
+  items: BookmarkItem[];
+};
+
+/**
+ * Group consecutive search results by domain, preserving the original order
+ * of the first occurrence of each domain. Used by the UI to collapse
+ * same-site clutter (e.g. multiple history entries from one site).
+ */
+export function groupByDomain(results: BookmarkItem[]): ResultGroup[] {
+  const groups: ResultGroup[] = [];
+  const groupIndexByDomain = new Map<string, number>();
+
+  for (const item of results) {
+    const existing = groupIndexByDomain.get(item.domain);
+    if (existing === undefined) {
+      groupIndexByDomain.set(item.domain, groups.length);
+      groups.push({ domain: item.domain, items: [item] });
+    } else {
+      groups[existing].items.push(item);
+    }
+  }
+
+  return groups;
+}
+
 export function searchBookmarks(
   items: BookmarkItem[],
   query: string,

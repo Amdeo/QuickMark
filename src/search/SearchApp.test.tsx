@@ -7,7 +7,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("SearchApp shows the full result URL instead of only the domain", async () => {
+test("SearchApp shows the compact URL with the full URL in the title attribute", async () => {
   const bookmark: BookmarkItem = {
     id: "bookmark-1",
     title: "Example Docs",
@@ -33,8 +33,8 @@ test("SearchApp shows the full result URL instead of only the domain", async () 
   const { SearchApp } = await import("./SearchApp");
   const html = renderToStaticMarkup(<SearchApp />);
 
-  expect(html).toContain("https://example.com/docs/deep/path?utm_source=quickmark");
-  expect(html).not.toContain(">example.com<");
+  expect(html).toContain(">example.com/docs/deep/path?utm_source=quickmark<");
+  expect(html).toContain('title="https://example.com/docs/deep/path?utm_source=quickmark"');
 });
 
 test("copyUrlToClipboard writes the URL to the clipboard", async () => {
@@ -109,8 +109,8 @@ test("SearchApp initially renders only the first page of results", async () => {
   const results: BookmarkItem[] = Array.from({ length: 60 }, (_, index) => ({
     id: `bookmark-${index}`,
     title: `Example ${index}`,
-    url: `https://example.com/${index}`,
-    domain: "example.com",
+    url: `https://site${index}.com/${index}`,
+    domain: `site${index}.com`,
     favicon: "",
     visitCount: index,
     source: "bookmark",
@@ -133,4 +133,39 @@ test("SearchApp initially renders only the first page of results", async () => {
 
   expect(html).toContain("Example 49");
   expect(html).not.toContain("Example 50");
+});
+
+test("SearchApp collapses same-domain results with an expand button", async () => {
+  const results: BookmarkItem[] = Array.from({ length: 5 }, (_, index) => ({
+    id: `h-${index}`,
+    title: `Kimi ${index}`,
+    url: `https://www.kimi.com/page/${index}`,
+    domain: "kimi.com",
+    favicon: "",
+    visitCount: 5,
+    source: "history",
+    lastVisitedAt: 1000 + index,
+  }));
+
+  vi.stubGlobal("navigator", { platform: "MacIntel" });
+  vi.doMock("./useBookmarks", () => ({
+    useBookmarks: () => ({
+      results,
+      isLoading: false,
+      error: undefined,
+      folderPaths: new Map(),
+      refresh: vi.fn(),
+      markVisited: vi.fn(),
+    }),
+  }));
+
+  const { SearchApp } = await import("./SearchApp");
+  const html = renderToStaticMarkup(<SearchApp />);
+
+  expect(html).toContain("kimi.com");
+  expect(html).toContain("5 条");
+  expect(html).toContain("还有 2 条");
+  expect(html).toContain("Kimi 0");
+  expect(html).toContain("Kimi 2");
+  expect(html).not.toContain("Kimi 3");
 });

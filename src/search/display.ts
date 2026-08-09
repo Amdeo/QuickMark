@@ -41,6 +41,29 @@ export function getNextVisibleResultCount(current: number, total: number, pageSi
   return Math.min(total, current + pageSize);
 }
 
+export function formatRelativeTime(timestamp: number, now = Date.now()): string {
+  const diff = now - timestamp;
+  const minute = 60_000;
+  const hour = 3_600_000;
+  const day = 86_400_000;
+
+  if (diff < minute) return "刚刚";
+  if (diff < hour) return `${Math.floor(diff / minute)} 分钟前`;
+  if (diff < day) return `${Math.floor(diff / hour)} 小时前`;
+  if (diff < 2 * day) return "昨天";
+  if (diff < 7 * day) return `${Math.floor(diff / day)} 天前`;
+
+  const date = new Date(timestamp);
+  const sameYear = date.getFullYear() === new Date(now).getFullYear();
+  return sameYear
+    ? `${date.getMonth() + 1}月${date.getDate()}日`
+    : `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+export function compactUrl(url: string): string {
+  return url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "");
+}
+
 export function isNearScrollBottom(metrics: ScrollMetrics, threshold = 120): boolean {
   return metrics.scrollTop + metrics.clientHeight >= metrics.scrollHeight - threshold;
 }

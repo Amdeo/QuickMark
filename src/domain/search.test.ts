@@ -1,4 +1,4 @@
-import { createBookmarkSearchIndex, filterBySource, searchBookmarks } from "./search";
+import { createBookmarkSearchIndex, filterBySource, searchBookmarks, groupByDomain } from "./search";
 import type { BookmarkItem } from "./types";
 
 const items: BookmarkItem[] = [
@@ -79,5 +79,25 @@ describe("searchBookmarks", () => {
     ];
     const result = searchBookmarks(historyItems, "github", createBookmarkSearchIndex(historyItems), "history");
     expect(result[0].id).toBe("h2");
+  });
+});
+
+describe("groupByDomain", () => {
+  test("keeps single-domain results in one group in first-occurrence order", () => {
+    const results: BookmarkItem[] = [
+      { id: "h1", title: "Kimi", url: "https://www.kimi.com/", domain: "kimi.com", visitCount: 47, source: "history", lastVisitedAt: 5000 },
+      { id: "h2", title: "Kimi", url: "https://www.kimi.com/settings", domain: "kimi.com", visitCount: 32, source: "history", lastVisitedAt: 4000 },
+      { id: "b1", title: "React Docs", url: "https://react.dev", domain: "react.dev", visitCount: 5, source: "bookmark" },
+      { id: "h3", title: "Kimi", url: "https://www.kimi.com/membership", domain: "kimi.com", visitCount: 19, source: "history", lastVisitedAt: 3000 },
+    ];
+
+    const groups = groupByDomain(results);
+
+    expect(groups.map((g) => g.domain)).toEqual(["kimi.com", "react.dev"]);
+    expect(groups[0].items.map((i) => i.id)).toEqual(["h1", "h2", "h3"]);
+  });
+
+  test("returns an empty list for no results", () => {
+    expect(groupByDomain([])).toEqual([]);
   });
 });

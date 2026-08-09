@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { BookmarkItem } from "../domain/types";
 import { Icon } from "../components/Icon";
 import { getExtensionFaviconUrl } from "../adapters/favicon";
 import { useBookmarks } from "./useBookmarks";
-import { getDisplayFolderPath, getNextVisibleResultCount, isNearScrollBottom, splitQueryMatch } from "./display";
-import type { SourceFilter } from "../domain/search";
+import { getDisplayFolderPath, getNextVisibleResultCount, isNearScrollBottom, splitQueryMatch, formatRelativeTime, compactUrl } from "./display";
+import { groupByDomain, type SourceFilter } from "../domain/search";
 
 const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
 const HISTORY_KEY = "quickmark-search-history";
 const THEME_KEY = "quickmark-theme";
 const MAX_HISTORY = 5;
 const RESULT_PAGE_SIZE = 50;
+const DEFAULT_ITEMS_PER_DOMAIN = 3;
 
 type ThemePreference = "light" | "dark" | "system";
 
@@ -100,6 +101,10 @@ export async function copyUrlToClipboard(
   document.body.removeChild(textarea);
 }
 
+function isComposingEvent(event: { nativeEvent: KeyboardEvent }): boolean {
+  return event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
+}
+
 type SearchAppProps = {
   mode?: "page" | "modal";
   onClose?: () => void;
@@ -113,8 +118,9 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   const [themePref, setThemePref] = useState<ThemePreference>(getThemePreference);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const inputRef = useRef<HTMLInputElement>(null);
+  const selectedItemRef = useRef<BookmarkItem | undefined>(undefined);
+  const [expandedDomains, setExpandedDomains] = useState<ReadonlySet<string>>(new Set());
   const { results, isLoading, error, folderPaths, refresh, markVisited } = useBookmarks(query, sourceFilter);
-  const selected = results[selectedIndex];
 
   const effectiveTheme = getEffectiveTheme(themePref);
 
@@ -126,12 +132,6 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     setSelectedIndex(0);
     setVisibleResultCount(RESULT_PAGE_SIZE);
   }, [query, sourceFilter]);
-
-  useEffect(() => {
-    if (selectedIndex > Math.max(results.length - 1, 0)) {
-      setSelectedIndex(Math.max(results.length - 1, 0));
-    }
-  }, [results.length, selectedIndex]);
 
   useEffect(() => {
     setVisibleResultCount((count) => Math.min(Math.max(count, RESULT_PAGE_SIZE), results.length || RESULT_PAGE_SIZE));
@@ -179,10 +179,64 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     return parts.join(" · ");
   }, [isLoading, error, query, results.length, bookmarkCount, historyCount, sourceFilter]);
 
-  const visibleResults = useMemo(
+  const loadedResults = useMemo(
     () => results.slice(0, visibleResultCount),
     [results, visibleResultCount]
   );
+
+  const groups = useMemo(() => groupByDomain(loadedResults), [loadedResults]);
+
+  const renderedGroups = useMemo(() => {
+    let flatIndex = 0;
+    return groups.map((group) => {
+      const isGrouped = group.items.length > 1;
+      const isExpanded = expandedDomains.has(group.domain);
+      const items =
+        isGrouped && !isExpanded
+          ? group.items.slice(0, DEFAULT_ITEMS_PER_DOMAIN)
+          : group.items;
+      const entries = items.map((item) => ({ item, flatIndex: flatIndex++ }));
+      return {
+        group,
+        isGrouped,
+        isExpanded,
+        entries,
+        hiddenCount: group.items.length - items.length,
+      };
+    });
+  }, [groups, expandedDomains]);
+
+  const visibleResults = useMemo(
+    () => renderedGroups.flatMap((g) => g.entries.map((e) => e.item)),
+    [renderedGroups]
+  );
+
+  const selected = visibleResults[selectedIndex];
+
+  useEffect(() => {
+    if (selectedIndex > Math.max(visibleResults.length - 1, 0)) {
+      setSelectedIndex(Math.max(visibleResults.length - 1, 0));
+    }
+  }, [visibleResults.length, selectedIndex]);
+
+  // 仅当选中索引变化时记录目标条目；展开/收起分组会改变 visibleResults
+  // 但不应覆盖 ref，否则下面的校正 effect 无法把选中项跟随到新位置。
+  useEffect(() => {
+    const current = visibleResults[selectedIndex];
+    if (current) {
+      selectedItemRef.current = current;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIndex]);
+
+  useEffect(() => {
+    const target = selectedItemRef.current;
+    if (!target) return;
+    const newIndex = visibleResults.findIndex((item) => item.id === target.id);
+    if (newIndex >= 0 && newIndex !== selectedIndex) {
+      setSelectedIndex(newIndex);
+    }
+  }, [visibleResults, selectedIndex]);
 
   async function openSelected(newTab: boolean) {
     if (!selected) {
@@ -219,9 +273,26 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     onClose?.();
   }
 
+  function toggleDomain(domain: string): void {
+    setExpandedDomains((prev) => {
+      const next = new Set(prev);
+      if (next.has(domain)) {
+        next.delete(domain);
+      } else {
+        next.add(domain);
+      }
+      return next;
+    });
+  }
+
+  function expandDomain(domain: string): void {
+    setExpandedDomains((prev) => (prev.has(domain) ? prev : new Set(prev).add(domain)));
+  }
+
   useEffect(() => {
     function onEscapeCapture(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
+      if (event.isComposing || event.keyCode === 229) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       if (query) {
@@ -239,6 +310,9 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
       data-theme={effectiveTheme}
       className={["text-on-surface", mode === "modal" ? "w-full" : "min-h-screen bg-surface"].join(" ")}
       onKeyDown={(event) => {
+        if (isComposingEvent(event)) {
+          return;
+        }
         if (event.key === "ArrowDown") {
           event.preventDefault();
           setSelectedIndex((index) => Math.min(index + 1, results.length - 1));
@@ -266,9 +340,10 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
         if (/^[1-9]$/.test(event.key) && (event.metaKey || event.ctrlKey)) {
           event.preventDefault();
           const index = parseInt(event.key, 10) - 1;
-          if (results[index]) {
-            void markVisited(results[index].id);
-            void openBookmark(results[index], false);
+          const target = visibleResults[index];
+          if (target) {
+            void markVisited(target.id);
+            void openBookmark(target, false);
             onClose?.();
           }
         }
@@ -429,17 +504,39 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                 <LoadingRow />
               </>
             ) : null}
-            {visibleResults.map((item, index) => (
-              <BookmarkRow
-                key={item.id}
-                item={item}
-                folderPath={folderPaths.get(item.id) ?? []}
-                query={query}
-                index={index}
-                isSelected={index === selectedIndex}
-                onMouseEnter={() => setSelectedIndex(index)}
-                onOpen={(newTab) => void openSelected(newTab)}
-              />
+            {renderedGroups.map(({ group, isGrouped, isExpanded, entries, hiddenCount }) => (
+              <Fragment key={group.domain}>
+                {isGrouped ? (
+                  <GroupHeader
+                    domain={group.domain}
+                    count={group.items.length}
+                    isExpanded={isExpanded}
+                    onToggle={() => toggleDomain(group.domain)}
+                  />
+                ) : null}
+                {entries.map(({ item, flatIndex }) => (
+                  <BookmarkRow
+                    key={item.id}
+                    item={item}
+                    folderPath={folderPaths.get(item.id) ?? []}
+                    query={query}
+                    index={flatIndex}
+                    isSelected={flatIndex === selectedIndex}
+                    onMouseEnter={() => setSelectedIndex(flatIndex)}
+                    onOpen={(newTab) => void openSelected(newTab)}
+                  />
+                ))}
+                {hiddenCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => expandDomain(group.domain)}
+                    className="mx-6 flex h-7 cursor-pointer items-center gap-1.5 self-start rounded-md px-2 text-[11px] text-outline transition-colors hover:bg-surface-container hover:text-on-surface"
+                  >
+                    <Icon name="expand_more" size={12} className="shrink-0" />
+                    <span>还有 {hiddenCount} 条</span>
+                  </button>
+                ) : null}
+              </Fragment>
             ))}
           </div>
 
@@ -528,6 +625,35 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
         </div>
       </section>
     </main>
+  );
+}
+
+function GroupHeader({
+  domain,
+  count,
+  isExpanded,
+  onToggle,
+}: {
+  domain: string;
+  count: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="mx-2 mt-1 flex h-8 cursor-pointer items-center gap-2 rounded-md px-2 text-[11px] text-outline transition-colors hover:bg-surface-container-low/70 hover:text-on-surface"
+    >
+      <Icon name="workspaces" size={11} className="shrink-0 opacity-70" />
+      <span className="truncate font-medium">{domain}</span>
+      <span className="shrink-0 opacity-60">{count} 条</span>
+      <Icon
+        name="expand_more"
+        size={12}
+        className={["shrink-0 opacity-70 transition-transform", isExpanded ? "rotate-180" : ""].join(" ")}
+      />
+    </button>
   );
 }
 
@@ -641,7 +767,7 @@ function BookmarkRow({
             </span>
           )}
           {folderPath.length > 0 && (
-            <span className="hidden shrink-0 items-center gap-1 rounded-md bg-surface-container/60 px-1.5 py-0.5 text-[10.5px] text-outline sm:inline-flex">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-surface-container/60 px-1.5 py-0.5 text-[10.5px] text-outline">
               <Icon name="workspaces" size={10} className="shrink-0" />
               <span className="max-w-[140px] truncate">
                 <HighlightedText text={displayFolderPath} query={query} />
@@ -649,23 +775,21 @@ function BookmarkRow({
             </span>
           )}
         </div>
-        <div className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] leading-4 text-outline">
+        <div className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-4 text-outline">
           <Icon name="link" size={11} className="shrink-0 text-outline/70" />
           <span className="truncate" title={item.url}>
-            <HighlightedText text={item.url} query={query} />
+            <HighlightedText text={compactUrl(item.url)} query={query} />
           </span>
+          {item.source === "history" && item.lastVisitedAt ? (
+            <span className="flex-none whitespace-nowrap text-outline/70">
+              {formatRelativeTime(item.lastVisitedAt)}
+            </span>
+          ) : null}
         </div>
       </div>
 
       {/* Right Action Area */}
       <div className="flex shrink-0 items-center gap-1">
-        <span
-          className="hidden items-center gap-0.5 rounded-md px-1.5 py-0.5 font-code text-[10px] tracking-tight text-outline sm:flex"
-          aria-hidden
-        >
-          {item.visitCount}
-          <span className="opacity-60">次</span>
-        </span>
         <button
           type="button"
           aria-label={`复制链接：${item.title}`}
