@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc && vite build && npx tailwindcss -i src/styles.css -o dist/assets/styles.css --minify && esbuild src/content/index.tsx --bundle --format=iife --platform=browser --outfile=dist/assets/content.js --define:process.env.NODE_ENV='\"production\"'",
+    "build": "tsc && vite build && npx tailwindcss -i src/styles.css -o dist/assets/styles.css --minify && esbuild src/content/index.tsx --bundle --format=iife --platform=browser --outfile=dist/assets/content.js --define:process.env.NODE_ENV='\"production\"' && esbuild src/content/search.tsx --bundle --format=esm --splitting --outdir=dist/assets --entry-names=content-search --chunk-names=chunk-[hash] --platform=browser --define:process.env.NODE_ENV='\"production\"'",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -13,6 +13,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "fuse.js": "^7.0.0",
     "lucide-react": "^1.14.0",
+    "pinyin-pro": "^3.28.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

@@ -1,4 +1,4 @@
-import { createBookmarkSearchIndex, filterBySource, filterByTime, isHomeUrl, searchBookmarks, groupByDomain, resolveDirectUrl } from "./search";
+import { createBookmarkSearchIndex, ensurePinyinLoaded, filterBySource, filterByTime, isHomeUrl, searchBookmarks, groupByDomain, resolveDirectUrl } from "./search";
 import type { BookmarkItem } from "./types";
 
 const items: BookmarkItem[] = [
@@ -196,6 +196,37 @@ describe("searchBookmarks sort modes", () => {
 
     const result = searchBookmarks(mixed, "react", mixedFuse, "all", "today");
     expect(result.map((i) => i.id)).toEqual(["fresh"]);
+  });
+});
+
+describe("pinyin search", () => {
+  const zhItems: BookmarkItem[] = [
+    { id: "zhihu", title: "知乎 - 发现", url: "https://www.zhihu.com", domain: "zhihu.com", visitCount: 5, source: "bookmark" },
+    { id: "react", title: "React 文档", url: "https://react.dev", domain: "react.dev", visitCount: 3, source: "bookmark" },
+    { id: "github", title: "GitHub", url: "https://github.com", domain: "github.com", visitCount: 1, source: "bookmark" },
+  ];
+
+  // 拼音字典改为按需惰性加载，测试前先确保就绪。
+  beforeAll(async () => {
+    await ensurePinyinLoaded();
+  });
+
+  test("pinyin query matches a Chinese-only title", () => {
+    const fuse = createBookmarkSearchIndex(zhItems);
+    const result = searchBookmarks(zhItems, "zhihu", fuse);
+    expect(result[0]?.id).toBe("zhihu");
+  });
+
+  test("pinyin query matches a mixed Chinese-English title", () => {
+    const fuse = createBookmarkSearchIndex(zhItems);
+    const result = searchBookmarks(zhItems, "wendang", fuse);
+    expect(result[0]?.id).toBe("react");
+  });
+
+  test("spaced pinyin query matches", () => {
+    const fuse = createBookmarkSearchIndex(zhItems);
+    const result = searchBookmarks(zhItems, "zhi hu", fuse);
+    expect(result[0]?.id).toBe("zhihu");
   });
 });
 

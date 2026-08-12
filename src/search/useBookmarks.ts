@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BookmarkItem } from "../domain/types";
-import { createBookmarkSearchIndex, filterBySource, filterByTime, searchBookmarks } from "../domain/search";
+import { createBookmarkSearchIndex, ensurePinyinLoaded, filterBySource, filterByTime, hasCjkTitles, searchBookmarks } from "../domain/search";
 import type { SortMode, SourceFilter, TimeFilter } from "../domain/search";
 import { BOOKMARK_CACHE_KEY } from "../background/cacheKeys";
 import type { BookmarkResult } from "../background/bookmarkCache";
@@ -139,7 +139,25 @@ export function useBookmarks(
     return () => chrome.storage.onChanged.removeListener(listener);
   }, [applyBookmarkState]);
 
-  const fuse = useMemo(() => createBookmarkSearchIndex(bookmarks), [bookmarks]);
+  // 拼音字典按需加载：书签含中文标题时才拉取字典，就绪后重建搜索索引。
+  const [pinyinReady, setPinyinReady] = useState(false);
+
+  useEffect(() => {
+    if (!hasCjkTitles(bookmarks)) return;
+    let cancelled = false;
+    ensurePinyinLoaded()
+      .then(() => {
+        if (!cancelled) setPinyinReady(true);
+      })
+      .catch(() => {
+        // 字典加载失败：保持无拼音搜索，不阻塞主流程。
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookmarks]);
+
+  const fuse = useMemo(() => createBookmarkSearchIndex(bookmarks), [bookmarks, pinyinReady]);
 
   // 启用来源/时间筛选时，仅在条目或筛选条件变化后重建搜索索引，
   // 避免每次按键都重复构建。

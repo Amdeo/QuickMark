@@ -6,6 +6,7 @@ QuickMark is a keyboard-first Chrome Extension for searching local bookmarks and
 
 - `Command/Ctrl + Shift + K`: show a modal search palette over the current webpage
 - Fuzzy search by title, URL, and domain with Fuse.js
+- Pinyin search for Chinese titles (e.g. `zhihu` finds 知乎)
 - Combined bookmark + history results, grouped by domain
 - Filters: source (all / bookmark / history), time range (today / week / month)
 - Sort modes: smart, recent, frequent, title, created, relevance

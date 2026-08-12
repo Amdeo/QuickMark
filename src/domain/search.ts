@@ -1,19 +1,81 @@
 import Fuse, { type IFuseOptions } from "fuse.js";
 import type { BookmarkItem } from "./types";
 
-const fuseOptions: IFuseOptions<BookmarkItem> = {
+/** Fuse 索引使用的中间类型：额外携带中文标题的全拼字段。 */
+export type IndexableBookmarkItem = BookmarkItem & {
+  /** 中文标题的全拼（带空格与紧凑两种变体），纯英文标题为空字符串。 */
+  __pinyin: string;
+};
+
+const PINYIN_KEY = "__pinyin";
+
+const fuseOptions: IFuseOptions<IndexableBookmarkItem> = {
   keys: [
     { name: "title", weight: 0.5 },
     { name: "domain", weight: 0.3 },
-    { name: "url", weight: 0.2 }
+    { name: "url", weight: 0.2 },
+    { name: PINYIN_KEY, weight: 0.3 }
   ],
   includeScore: true,
   threshold: 0.35,
   ignoreLocation: true
 };
 
-export function createBookmarkSearchIndex(items: BookmarkItem[]) {
-  return new Fuse(items, fuseOptions);
+const CJK_PATTERN = /[\u4e00-\u9fff]/;
+
+type PinyinFn = (text: string, options?: { toneType?: string; type?: string; nonZh?: string }) => string;
+
+let pinyinFn: PinyinFn | undefined;
+let pinyinLoadPromise: Promise<PinyinFn> | undefined;
+
+/**
+ * 惰性加载拼音字典。字典作为独立 chunk（esbuild splitting）打包，
+ * 仅在书签中存在中文标题时才被拉取；纯英文书签的用户零开销。
+ */
+export function ensurePinyinLoaded(): Promise<void> {
+  if (pinyinFn) return Promise.resolve();
+  if (!pinyinLoadPromise) {
+    pinyinLoadPromise = import("pinyin-pro")
+      .then((module) => {
+        pinyinFn = module.pinyin as PinyinFn;
+        return pinyinFn;
+      })
+      .catch((error) => {
+        pinyinLoadPromise = undefined;
+        throw error;
+      });
+  }
+  return pinyinLoadPromise.then(() => undefined);
+}
+
+/** 是否存在中文标题（决定是否需要拼音字典）。 */
+export function hasCjkTitles(items: BookmarkItem[]): boolean {
+  return items.some((item) => CJK_PATTERN.test(item.title));
+}
+
+/**
+ * 为含中文的标题生成全拼，同时提供带空格（zhi hu）与紧凑（zhihu）两种
+ * 变体，保证「zhihu」与「zhi hu」两种输入习惯都能命中。
+ * 纯英文标题返回空字符串，避免与 title 字段重复计分。
+ * 字典未就绪时也返回空字符串（索引先以无拼音状态建立）。
+ */
+function toSearchPinyin(text: string): string {
+  if (!CJK_PATTERN.test(text)) return "";
+  if (!pinyinFn) return "";
+  try {
+    const spaced = pinyinFn(text, { toneType: "none", type: "string", nonZh: "consecutive" });
+    const compact = spaced.replace(/\s+/g, "");
+    return compact ? `${spaced} ${compact}` : spaced;
+  } catch {
+    return "";
+  }
+}
+
+export function createBookmarkSearchIndex(items: BookmarkItem[]): Fuse<IndexableBookmarkItem> {
+  return new Fuse(
+    items.map((item) => ({ ...item, [PINYIN_KEY]: toSearchPinyin(item.title) })),
+    fuseOptions
+  );
 }
 
 export type SourceFilter = "all" | "bookmark" | "history";
@@ -141,11 +203,11 @@ function getSortFn(sortMode: SortMode, sourceFilter: SourceFilter): (a: Bookmark
 export function searchBookmarks(
   items: BookmarkItem[],
   query: string,
-  fuse = createBookmarkSearchIndex(items),
+  fuse: Fuse<IndexableBookmarkItem> = createBookmarkSearchIndex(items),
   sourceFilter: SourceFilter = "all",
   timeFilter: TimeFilter = "all",
   sortMode: SortMode = "smart",
-  filteredSearchIndex?: Fuse<BookmarkItem>
+  filteredSearchIndex?: Fuse<IndexableBookmarkItem>
 ): BookmarkItem[] {
   const textQuery = query.trim();
   const filtered = filterByTime(filterBySource(items, sourceFilter), timeFilter);

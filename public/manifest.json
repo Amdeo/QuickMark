@@ -33,7 +33,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/styles.css", "_favicon/*"],
+      "resources": ["assets/styles.css", "assets/content-search.js", "assets/chunk-*.js", "_favicon/*"],
       "matches": ["http://*/*", "https://*/*"]
     }
   ],
