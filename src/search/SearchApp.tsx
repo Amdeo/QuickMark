@@ -979,6 +979,17 @@ function BookmarkRow({
 
       {/* Right Action Area */}
       <div className="flex shrink-0 items-center gap-1">
+        {item.visitCount > 0 ? (
+          <span
+            className={[
+              "hidden shrink-0 items-center gap-1 text-[11px] text-outline/80 transition-opacity sm:flex",
+              isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            ].join(" ")}
+          >
+            <Icon name="history" size={11} className="shrink-0 opacity-70" />
+            {item.visitCount} 次
+          </span>
+        ) : null}
         <button
           type="button"
           aria-label={isCopied ? "已复制" : copyFailed ? "复制失败" : `复制链接：${item.title}`}

@@ -248,6 +248,7 @@ QuickMark is a Chrome Extension command palette for searching local bookmarks an
 The design language softens Material Design 3 into an Arc / Notion-like aesthetic: bigger rounded corners, translucent hairline borders instead of heavy dividers, floating row cards with inset selection rings, and a multi-layer soft shadow on the modal. The color system preserves MD3 semantics (surface, on-surface, primary, secondary, tertiary, error) but the values are tuned for a developer productivity tool — warm-neutral-tinted light mode and a near-black dark mode.
 
 **Key Characteristics:**
+
 - **Keyboard-first interaction** — every action has a keyboard shortcut; mouse is secondary.
 - **Floating row cards** — results are rendered as rounded cards (`rounded-xl`, `mx-2`) with no flat list separators; hover lifts via background tint.
 - **Multi-layer modal shadow** — three shadow layers give depth without heaviness: ambient, penumbra, and umbra.
@@ -261,6 +262,7 @@ The design language softens Material Design 3 into an Arc / Notion-like aestheti
 > Source: `src/styles.css` — CSS custom properties mapped to Tailwind theme tokens.
 
 ### Brand & Accent
+
 - **Primary Blue** (`{colors.primary-light}` #0058BE / `{colors.primary-dark}` #B0C6FF): The signature accent — selected row background tint, primary CTA buttons, focus states.
 - **Primary Container** (`{colors.primary-container-light}` #2671E1 / `{colors.primary-container-dark}` #004494): Hover/active states of primary buttons.
 - **Primary Fixed** (`{colors.primary-fixed-light}` #D8E2FF / `{colors.primary-fixed-dark}` #004494): Selected row background (low-opacity tint).
@@ -269,9 +271,11 @@ The design language softens Material Design 3 into an Arc / Notion-like aestheti
 - **Error Red** (`{colors.error}` #BA1A1A): Error states and error bar text.
 
 ### Surface Ladder
+
 The surface system follows MD3 semantics. In light mode, surfaces ascend from white toward a warm off-white; in dark mode, they descend from near-black toward charcoal.
 
 **Light mode surfaces:**
+
 - **Canvas** (`{colors.canvas-light}` #F7F6F1): Page background (popup standalone mode).
 - **Surface 1** (`{colors.surface-1-light}` #FDFCF8): Modal container background, highest lifted surface.
 - **Surface 2** (`{colors.surface-2-light}` #F0EFEA): Footer background, history item hover, loading skeleton.
@@ -280,6 +284,7 @@ The surface system follows MD3 semantics. In light mode, surfaces ascend from wh
 - **Surface 5** (`{colors.surface-5-light}` #DDDCD6): Surface variant, used for elevated panels.
 
 **Dark mode surfaces:**
+
 - **Canvas** (`{colors.canvas-dark}` #11131A): Page background.
 - **Surface 1** (`{colors.surface-1-dark}` #0C0E14): Modal container.
 - **Surface 2** (`{colors.surface-2-dark}` #11131A): Footer, history hover.
@@ -288,15 +293,18 @@ The surface system follows MD3 semantics. In light mode, surfaces ascend from wh
 - **Surface 5** (`{colors.surface-5-dark}` #2F313D): Surface variant.
 
 ### Text
+
 - **Ink** (`{colors.ink-light}` #141B2B / `{colors.ink-dark}` #E1E2EC): Headlines, result titles, primary body.
 - **Ink Muted** (`{colors.ink-muted-light}` #424753 / `{colors.ink-muted-dark}` #C3C5D5): URLs, secondary meta.
 - **Ink Subtle** (`{colors.ink-subtle-light}` #727785 / `{colors.ink-subtle-dark}` #8E909F): Placeholders, disabled states, folder paths, shortcut hints.
 
 ### Borders
+
 - **Hairline** (`{colors.hairline-light}` #C2C6D6 / `{colors.hairline-dark}` #434656): Default borders — modal ring, row dividers (used sparingly), Kbd borders.
 - **Hairline Strong** (`{colors.hairline-strong-light}` #727785 / `{colors.hairline-strong-dark}` #8E909F): Stronger borders for focus states.
 
 ### Semantic
+
 - **Error Container** (`{colors.error-container-light}` #FFDAD6 / `{colors.error-container-dark}` #93000A): Error bar background.
 - **Tertiary Fixed** (`{colors.tertiary-fixed-light}` #FFDCC3 / `{colors.tertiary-fixed-dark}` #6E3900): "历史" badge background.
 
@@ -310,7 +318,7 @@ The surface system follows MD3 semantics. In light mode, surfaces ascend from wh
 ### Hierarchy
 
 | Token | Size | Weight | Line Height | Letter Spacing | Use |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | `{typography.display}` | 20px | 600 | 28px | -0.02em | Empty state title, status text |
 | `{typography.headline}` | 16px | 600 | 24px | -0.01em | Section headers (rare) |
 | `{typography.body}` | 14px | 400 | 20px | 0em | Default body, result titles, folder chips |
@@ -350,7 +358,7 @@ The command palette is dense by design. Vertical space is precious — 600px mod
 ## Elevation & Depth
 
 | Level | Treatment | Use |
-|---|---|---|
+| --- | --- | --- |
 | 0 (flat) | No shadow | Body text, footer text, empty state text |
 | 1 (surface lift) | `{colors.surface-1}` background, `1px {colors.hairline}` ring | Modal container, error bar |
 | 2 (hover lift) | `{colors.surface-2}` background | Row hover, history item hover, footer |
@@ -361,11 +369,13 @@ The command palette is dense by design. Vertical space is precious — 600px mod
 ### Modal Shadow
 
 The modal uses a carefully tuned three-layer shadow to feel lifted but not cartoonish:
+
 ```
 0 24px 56px -20px rgba(15, 23, 42, 0.22),   /* ambient */
 0 8px 24px -12px rgba(15, 23, 42, 0.10),    /* penumbra */
 0 1px 2px rgba(15, 23, 42, 0.04)            /* umbra */
 ```
+
 ### Modal Entrance
 
 The overlay opens with a two-part entrance with a light spring feel:
@@ -384,7 +394,7 @@ The content-script modal host renders a translucent dark scrim (`rgba(0,0,0,0.15
 ### Border Radius Scale
 
 | Token | Value | Use |
-|---|---|---|
+| --- | --- | --- |
 | `{rounded.xs}` | 2px | Tiny chips, sharp edges |
 | `{rounded.sm}` | 4px | Kbd chips, small buttons |
 | `{rounded.md}` | 8px | Number badges, folder chips, action chips, favicon container |
@@ -402,6 +412,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 ### Search Header
 
 **`search-header`** — Sticky top bar containing the search icon, input, clear button, and shortcut chip.
+
 - Height: 56px. Background `{colors.surface-1}`. Bottom border `1px {colors.hairline}`.
 - Padding: `0 16px`. Flex row with `gap-3` (12px).
 - **Search icon**: 18px, `{colors.ink-subtle}`.
@@ -412,12 +423,13 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 ### Result Row
 
 **`result-row`** — The primary content unit. A floating card with favicon, title, URL, badges, and action buttons.
+
 - Margin: `0 8px` (floating inset). Padding: `10px 12px`. Rounded `{rounded.lg}` (12px).
 - **Idle**: transparent background.
 - **Hover**: `bg-surface-2` (`{colors.surface-2}`).
 - **Selected**: `bg-primary-fixed/40` + `ring-1 ring-inset ring-primary/15` (`{colors.primary-fixed}` at 40% opacity, `{colors.primary}` ring at 15% opacity).
 - **Favicon container**: 36px square, `{rounded.md}`, `{colors.surface-3}` background, `1px {colors.hairline}` ring. Contains a 16–18px favicon image or a fallback globe icon.
-- **Number badge**: 16px, `{rounded.md}`, appears top-left of favicon. Hidden unless hovered or selected. Selected: `{colors.primary}` bg, `{colors.on-primary}` text. Idle: `{colors.surface-4}` bg, `{colors.ink-subtle}` text.
+- **Number badge**: 16px, `{rounded.md}`, appears top-left of favicon. Always visible — it is the affordance for the `Cmd/Ctrl+1–9` direct jump, so hiding it would break discoverability. Selected: `{colors.primary}` bg, `{colors.on-primary}` text. Idle: muted surface bg (`surface-container-high`), `{colors.ink-subtle}` text.
 - **Title**: `{typography.body}` at 14px, weight 600, truncated. Query matches highlighted with `{colors.tertiary-fixed}` background.
 - **Folder chip**: Inline badge after title. `{colors.surface-3}` background, `{colors.ink-subtle}` text, 10.5px. Hidden below `sm` breakpoint.
 - **History badge**: Inline "历史" badge. `{colors.tertiary-fixed}` background, `{colors.tertiary}` text, 10px.
@@ -427,6 +439,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 ### Keyboard Shortcut Chip (Kbd)
 
 **`kbd`** — Small inline chip representing a physical key.
+
 - Height: 18px, min-width: 18px. `{rounded.sm}` (4px).
 - Border: `1px {colors.hairline}`. Background: `{colors.surface-3}` at 70% opacity.
 - Font: `{typography.mono}` at 10px, weight 500, `{colors.ink-subtle}`.
@@ -435,6 +448,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 ### Footer
 
 **`footer`** — Sticky bottom bar showing context-aware keyboard shortcuts.
+
 - Border-top: `1px {colors.hairline}`. Background: `{colors.surface-2}` at 60% opacity.
 - Padding: `8px 12px`. Font: 11px, `{colors.ink-subtle}`.
 - Left side: shortcut groups — ↑↓ 导航, ↵ 打开/搜索, ⌘↵ 新标签, 1–9 直达, ⌘C 复制链接 (only when a result is selected).
@@ -444,6 +458,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 ### Empty State
 
 **`empty-state`** — Centered content shown when no results.
+
 - **Icon container**: 48px, `{rounded.2xl}`, `{colors.surface-3}` at 60% opacity, `1px {colors.hairline}` ring. Contains a 20px icon (search or bookmarks).
 - **Title**: `{typography.display}` at 14px, weight 600, `{colors.ink}`.
 - **Body**: `{typography.caption}`, `{colors.ink-subtle}`.
@@ -453,6 +468,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 ### Web Search CTA
 
 **`web-search-cta`** — Primary button inside the no-results empty state.
+
 - Background: `{colors.primary}`. Text: `{colors.on-primary}`. Font: 12.5px, weight 500.
 - Padding: `8px 14px`. Rounded `{rounded.lg}`.
 - Hover: `{colors.primary-container}`.
@@ -461,6 +477,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 ### Loading Row
 
 **`loading-row`** — Skeleton placeholder while results load.
+
 - Same outer structure as result-row but with `animate-pulse`.
 - Favicon: 36px square skeleton with `{colors.surface-3}` background.
 - Title: 3.5px height, 2/5 width, `{colors.surface-3}`.
@@ -469,6 +486,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 ### Error Bar
 
 **`error-bar`** — Inline error message with retry button.
+
 - Margin: `0 12px`. Padding: `12px 16px`. Rounded `{rounded.xl}`.
 - Border: `1px {colors.error-container}` at 60% opacity. Background: `{colors.error-container}` at 30% opacity.
 - Text: `{typography.caption}`, error-tinted color.
@@ -480,7 +498,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 
 - Use `{rounded.2xl}` (24px) for the modal outer frame and `{rounded.lg}` (12px) for result rows.
 - Keep result rows as floating cards with `mx-2` — never edge-to-edge flat list items.
-- Show the number badge only on hover or selection. Static badges add noise.
+- Keep the number badge always visible — it is the affordance for `Cmd/Ctrl+1–9`; only its color changes on selection.
 - Use `group-hover` for right-action-area buttons (copy, visit count, ↵ 打开) — keep rows clean at rest.
 - Respect `prefers-reduced-motion` — the global CSS already nullifies animations/transitions.
 - Use the three-layer modal shadow exactly as specified — do not simplify to a single shadow.
@@ -508,7 +526,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 QuickMark is a fixed-width command palette, not a fluid layout. Responsive rules are minimal:
 
 | Breakpoint | Key Changes |
-|---|---|
+| --- | --- |
 | `sm` (640px) | Footer shortcut groups start appearing (⌘↵, 1–9, ⌘C). Folder chips visible on rows. |
 | `< sm` | Footer shows only ↑↓ and ↵. Folder chips hidden. Action chips may hide. |
 
