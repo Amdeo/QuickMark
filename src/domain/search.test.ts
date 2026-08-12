@@ -1,4 +1,4 @@
-import { createBookmarkSearchIndex, filterBySource, filterByTime, isHomeUrl, searchBookmarks, groupByDomain } from "./search";
+import { createBookmarkSearchIndex, filterBySource, filterByTime, isHomeUrl, searchBookmarks, groupByDomain, resolveDirectUrl } from "./search";
 import type { BookmarkItem } from "./types";
 
 const items: BookmarkItem[] = [
@@ -196,6 +196,43 @@ describe("searchBookmarks sort modes", () => {
 
     const result = searchBookmarks(mixed, "react", mixedFuse, "all", "today");
     expect(result.map((i) => i.id)).toEqual(["fresh"]);
+  });
+});
+
+describe("resolveDirectUrl", () => {
+  test("returns https URL for a bare domain", () => {
+    expect(resolveDirectUrl("github.com")).toBe("https://github.com");
+  });
+
+  test("handles subdomains, ports, and paths", () => {
+    expect(resolveDirectUrl("docs.example.com")).toBe("https://docs.example.com");
+    expect(resolveDirectUrl("example.com:8080/admin")).toBe("https://example.com:8080/admin");
+    expect(resolveDirectUrl("example.com/a/b?q=1")).toBe("https://example.com/a/b?q=1");
+  });
+
+  test("passes through full http/https URLs unchanged", () => {
+    expect(resolveDirectUrl("https://github.com/issues")).toBe("https://github.com/issues");
+    expect(resolveDirectUrl("http://localhost:3000")).toBe("http://localhost:3000");
+  });
+
+  test("handles localhost with a port", () => {
+    expect(resolveDirectUrl("localhost:8080")).toBe("http://localhost:8080");
+  });
+
+  test("trims surrounding whitespace", () => {
+    expect(resolveDirectUrl("  github.com  ")).toBe("https://github.com");
+  });
+
+  test("returns undefined for plain text queries", () => {
+    expect(resolveDirectUrl("react docs")).toBeUndefined();
+    expect(resolveDirectUrl("github")).toBeUndefined();
+    expect(resolveDirectUrl("")).toBeUndefined();
+    expect(resolveDirectUrl("react")).toBeUndefined();
+  });
+
+  test("rejects domain-like text containing spaces", () => {
+    expect(resolveDirectUrl("two words.com")).toBeUndefined();
+    expect(resolveDirectUrl("github.com/hello world")).toBeUndefined();
   });
 });
 

@@ -10,6 +10,7 @@ QuickMark is a keyboard-first Chrome Extension for searching local bookmarks and
 - Filters: source (all / bookmark / history), time range (today / week / month)
 - Sort modes: smart, recent, frequent, title, created, relevance
 - `Enter`: open the selected result in the current tab
+- `Enter` on a complete URL/domain (e.g. `github.com`): navigate directly, address-bar style
 - `Command/Ctrl + Enter`: open the selected result in a new tab
 - `Command/Ctrl + 1-9`: jump to the N-th visible result
 - `Command/Ctrl + C`: copy the selected result's URL

@@ -4,7 +4,7 @@ import { Icon } from "../components/Icon";
 import { getExtensionFaviconUrl } from "../adapters/favicon";
 import { useBookmarks } from "./useBookmarks";
 import { getDisplayFolderPath, getNextVisibleResultCount, isNearScrollBottom, splitQueryMatch, formatRelativeTime, compactUrl } from "./display";
-import { groupByDomain, type SortMode, type SourceFilter, type TimeFilter } from "../domain/search";
+import { groupByDomain, resolveDirectUrl, type SortMode, type SourceFilter, type TimeFilter } from "../domain/search";
 
 const HISTORY_KEY = "quickmark-search-history";
 const THEME_KEY = "quickmark-theme";
@@ -145,6 +145,9 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
 
   const effectiveTheme = getEffectiveTheme(themePref);
 
+  // Address-bar semantics: a complete URL or bare domain navigates directly.
+  const directUrl = useMemo(() => resolveDirectUrl(query), [query]);
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -260,6 +263,12 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   }, [visibleResults, selectedIndex]);
 
   async function openSelected(newTab: boolean) {
+    // Address-bar semantics: a complete URL or bare domain always jumps
+    // directly, even when local results exist.
+    if (directUrl) {
+      await openDirectUrl(query.trim(), directUrl, newTab);
+      return;
+    }
     if (!selected) {
       if (query.trim()) {
         await openWebSearch(query.trim());
@@ -271,6 +280,24 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     }
     await markVisited(selected.id);
     await openBookmark(selected, newTab);
+    onClose?.();
+  }
+
+  async function openDirectUrl(rawQuery: string, url: string, newTab: boolean): Promise<void> {
+    await addSearchHistory(rawQuery);
+    setSearchHistory(getSearchHistory());
+    await openBookmark(
+      {
+        id: "quickmark-direct-url",
+        title: url,
+        url,
+        domain: new URL(url).hostname.replace(/^www\./, ""),
+        favicon: "",
+        visitCount: 0,
+        source: "history",
+      },
+      newTab
+    );
     onClose?.();
   }
 
@@ -663,7 +690,9 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
           {!isLoading && !error && !results.length ? (
             <EmptyState
               query={query}
+              directUrl={directUrl}
               hasHistory={searchHistory.length > 0}
+              onOpenDirect={(newTab) => void openDirectUrl(query.trim(), directUrl ?? "", newTab)}
               onSearchWeb={() => void openWebSearch(query)}
             />
           ) : null}
@@ -678,7 +707,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
             </span>
             <span className="flex items-center gap-1.5">
               <Kbd>↵</Kbd>
-              <span>{selected ? "打开" : query ? "搜索" : "打开"}</span>
+              <span>{directUrl ? "跳转" : selected ? "打开" : query ? "搜索" : "打开"}</span>
             </span>
             <span className="hidden items-center gap-1.5 sm:flex">
               <span className="flex items-center gap-0.5">
@@ -954,34 +983,69 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
 
 function EmptyState({
   query,
+  directUrl,
   hasHistory,
+  onOpenDirect,
   onSearchWeb,
 }: {
   query: string;
+  directUrl?: string;
   hasHistory: boolean;
+  onOpenDirect: (newTab: boolean) => void;
   onSearchWeb: () => void;
 }) {
   if (query) {
     return (
       <div className="flex flex-col items-center gap-3 px-6 pb-6 pt-10 text-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-container/60 ring-1 ring-outline-variant/40">
-          <Icon name="search" size={20} className="text-outline/70" />
+          <Icon name={directUrl ? "language" : "search"} size={20} className={directUrl ? "text-primary" : "text-outline/70"} />
         </div>
         <div>
-          <div className="text-[14px] font-semibold text-on-surface">未找到匹配项</div>
-          <div className="mt-0.5 text-[12px] text-outline">
-            书签和历史记录里都没有 “{query}”
-          </div>
+          {directUrl ? (
+            <>
+              <div className="text-[14px] font-semibold text-on-surface">直接打开</div>
+              <div className="mt-0.5 text-[12px] text-outline">{compactUrl(directUrl)}</div>
+            </>
+          ) : (
+            <>
+              <div className="text-[14px] font-semibold text-on-surface">未找到匹配项</div>
+              <div className="mt-0.5 text-[12px] text-outline">
+                书签和历史记录里都没有 “{query}”
+              </div>
+            </>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={onSearchWeb}
-          className="mt-1 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-[12.5px] font-medium text-on-primary shadow-sm transition-colors hover:bg-primary-container"
-        >
-          <Icon name="search" size={14} />
-          <span>用 Google 搜索</span>
-          <span className="ml-1 rounded bg-on-primary/15 px-1.5 py-0.5 font-code text-[10px]">↵</span>
-        </button>
+        {directUrl ? (
+          <div className="mt-1 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onOpenDirect(false)}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-[12.5px] font-medium text-on-primary shadow-sm transition-colors hover:bg-primary-container"
+            >
+              <Icon name="language" size={14} />
+              <span>打开网站</span>
+              <span className="ml-1 rounded bg-on-primary/15 px-1.5 py-0.5 font-code text-[10px]">↵</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenDirect(true)}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-3 py-2 text-[12px] font-medium text-on-surface transition-colors hover:bg-surface-container"
+            >
+              <span>新标签页打开</span>
+              <span className="font-code text-[10px] text-outline">⌘↵</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onSearchWeb}
+            className="mt-1 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-[12.5px] font-medium text-on-primary shadow-sm transition-colors hover:bg-primary-container"
+          >
+            <Icon name="search" size={14} />
+            <span>用 Google 搜索</span>
+            <span className="ml-1 rounded bg-on-primary/15 px-1.5 py-0.5 font-code text-[10px]">↵</span>
+          </button>
+        )}
       </div>
     );
   }

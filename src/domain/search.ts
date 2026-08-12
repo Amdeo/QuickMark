@@ -198,3 +198,31 @@ function compareByUsage(a: BookmarkItem, b: BookmarkItem): number {
   }
   return a.title.localeCompare(b.title);
 }
+
+const FULL_URL_PATTERN = /^https?:\/\/\S+$/i;
+const BARE_DOMAIN_PATTERN = /^([a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d{1,5})?(?:\/\S*)?$/i;
+const LOCALHOST_PATTERN = /^localhost(?::\d{1,5})?(?:\/\S*)?$/i;
+
+/**
+ * If a query is a complete URL or a bare domain, return a navigable URL
+ * (address-bar semantics). Returns undefined for plain text so the caller
+ * falls back to bookmark search / web search.
+ */
+export function resolveDirectUrl(query: string): string | undefined {
+  const trimmed = query.trim();
+  if (!trimmed) return undefined;
+
+  if (FULL_URL_PATTERN.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (BARE_DOMAIN_PATTERN.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  if (LOCALHOST_PATTERN.test(trimmed)) {
+    return `http://${trimmed}`;
+  }
+
+  return undefined;
+}
