@@ -93,19 +93,17 @@ export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: Bookm
       isStale = true;
     },
     /**
-     * Bump usage stats for an item the user just opened. Persisted
-     * through storage so smart/frequent sorting survives the next
-     * palette open; a later stale refresh reconciles with the real
-     * chrome.history data.
+     * 更新刚打开条目的使用统计并持久化，使智能/频率排序在下次打开
+     * 面板时保持一致；后续过期刷新会与真实的 chrome.history 数据对齐。
      */
     markVisited(id: string): void {
       if (!cachedResults) return;
-      const result = cachedResults.find((entry) => entry.item.id === id);
-      if (!result) return;
-      result.item.visitCount += 1;
-      result.item.lastVisitedAt = Date.now();
+      const bookmarkResult = cachedResults.find((entry) => entry.item.id === id);
+      if (!bookmarkResult) return;
+      bookmarkResult.item.visitCount += 1;
+      bookmarkResult.item.lastVisitedAt = Date.now();
       void options.storage?.write(cachedResults).catch(() => {
-        // In-memory cache is still updated if persistence fails.
+        // 即使持久化失败，内存缓存也已更新。
       });
     },
   };

@@ -33,9 +33,12 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message: { type?: string; url?: string; newTab?: boolean; id?: string; preferFresh?: boolean }, sender, sendResponse) => {
-  // Only accept messages from this extension's own contexts
-  // (content scripts, popup, etc.), never from other extensions or pages.
+chrome.runtime.onMessage.addListener((
+  message: { type?: string; url?: string; newTab?: boolean; id?: string; preferFresh?: boolean },
+  sender,
+  sendResponse
+) => {
+  // 仅接受本扩展上下文（内容脚本、弹窗等）发出的消息，拒绝其他扩展或页面。
   if (sender.id !== chrome.runtime.id) {
     return;
   }

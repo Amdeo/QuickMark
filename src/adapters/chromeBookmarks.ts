@@ -22,7 +22,7 @@ export function isSearchablePageUrl(url: string): boolean {
     ]);
     return !blockedProtocols.has(new URL(url).protocol.toLowerCase());
   } catch {
-    // Unparseable URLs are not injectable pages; be conservative.
+    // 无法解析的 URL 不可注入页面，保守地排除。
     return false;
   }
 }

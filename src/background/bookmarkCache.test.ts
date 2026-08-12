@@ -91,9 +91,9 @@ test("markVisited bumps usage stats and persists them through storage", async ()
 
   cache.markVisited("bookmark-1");
 
-  const { results } = await cache.getBookmarks();
-  expect(results[0].item.visitCount).toBe(1);
-  expect(results[0].item.lastVisitedAt).toBeGreaterThan(0);
+  const { item } = (await cache.getBookmarks()).results[0];
+  expect(item.visitCount).toBe(1);
+  expect(item.lastVisitedAt).toBeGreaterThan(0);
   expect(storage.write).toHaveBeenCalledWith([
     { item: { ...bookmark, visitCount: 1, lastVisitedAt: expect.any(Number) }, folderPath: [] },
   ]);

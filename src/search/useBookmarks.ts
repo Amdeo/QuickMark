@@ -141,9 +141,8 @@ export function useBookmarks(
 
   const fuse = useMemo(() => createBookmarkSearchIndex(bookmarks), [bookmarks]);
 
-  // When a source/time filter is active, the search runs against the
-  // filtered set. Build that index once per (items, filters) instead of
-  // on every keystroke.
+  // 启用来源/时间筛选时，仅在条目或筛选条件变化后重建搜索索引，
+  // 避免每次按键都重复构建。
   const filteredItems = useMemo(
     () =>
       sourceFilter === "all" && timeFilter === "all"
@@ -151,14 +150,14 @@ export function useBookmarks(
         : filterByTime(filterBySource(bookmarks, sourceFilter), timeFilter),
     [bookmarks, sourceFilter, timeFilter]
   );
-  const filteredFuse = useMemo(
+  const filteredSearchIndex = useMemo(
     () => (filteredItems === bookmarks ? fuse : createBookmarkSearchIndex(filteredItems)),
     [filteredItems, fuse]
   );
 
   const results = useMemo(
-    () => searchBookmarks(bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredFuse),
-    [bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredFuse]
+    () => searchBookmarks(bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredSearchIndex),
+    [bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredSearchIndex]
   );
 
   const markVisited = useCallback(async (id: string) => {
@@ -169,12 +168,11 @@ export function useBookmarks(
           : item
       )
     );
-    // Persist through the background cache so usage-aware sorting
-    // survives the next palette open.
+    // 通过后台缓存持久化，使基于使用频率的排序在下次打开面板时仍然有效。
     try {
       await chrome.runtime.sendMessage({ type: "QUICKMARK_MARK_VISITED", id });
     } catch {
-      // Best effort: the local update already applied.
+      // 本地更新已经生效，持久化只需尽力而为。
     }
   }, []);
 

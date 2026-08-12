@@ -30,31 +30,29 @@ const SORT_MODES: Array<{ value: SortMode; label: string }> = [
 
 type ThemePreference = "light" | "dark" | "system";
 
-// Search history and theme live in chrome.storage.local, NOT localStorage:
-// the content script shares the host page's origin, so localStorage would
-// scatter the data per-site and expose the queries to visited pages.
+// 搜索历史和主题保存在 chrome.storage.local，而非 localStorage：
+// 内容脚本与宿主页面共享源，使用 localStorage 会按站点分散数据，
+// 还会向访问过的页面暴露搜索词。
 
 let memoryThemePreference: ThemePreference | undefined;
 let themeLoadingPromise: Promise<ThemePreference> | undefined;
 
 async function ensureThemePreferenceLoaded(): Promise<ThemePreference> {
   if (memoryThemePreference !== undefined) return memoryThemePreference;
-  if (!themeLoadingPromise) {
-    themeLoadingPromise = (async () => {
-      let pref: ThemePreference = "system";
-      try {
-        const result = await chrome.storage.local.get(THEME_KEY);
-        const raw = result[THEME_KEY];
-        if (raw === "light" || raw === "dark" || raw === "system") {
-          pref = raw;
-        }
-      } catch {
-        /* keep default */
+  themeLoadingPromise ??= (async () => {
+    let preference: ThemePreference = "system";
+    try {
+      const result = await chrome.storage.local.get(THEME_KEY);
+      const raw = result[THEME_KEY];
+      if (raw === "light" || raw === "dark" || raw === "system") {
+        preference = raw;
       }
-      memoryThemePreference = pref;
-      return pref;
-    })();
-  }
+    } catch {
+      /* 保留默认值 */
+    }
+    memoryThemePreference = preference;
+    return preference;
+  })();
   return themeLoadingPromise;
 }
 
@@ -63,7 +61,7 @@ async function saveThemePreference(theme: ThemePreference): Promise<void> {
   try {
     await chrome.storage.local.set({ [THEME_KEY]: theme });
   } catch {
-    /* ignore */
+    /* 忽略持久化失败，内存中的主题仍然有效 */
   }
 }
 
@@ -178,12 +176,11 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     inputRef.current?.focus();
   }, []);
 
-  // Load the persisted theme preference once, then keep the effective
-  // theme in sync with the preference and with system theme changes.
+  // 仅加载一次持久化主题，随后同步用户偏好与系统主题变化。
   useEffect(() => {
     let cancelled = false;
-    ensureThemePreferenceLoaded().then((pref) => {
-      if (!cancelled) setThemePref(pref);
+    ensureThemePreferenceLoaded().then((preference) => {
+      if (!cancelled) setThemePref(preference);
     });
     return () => {
       cancelled = true;
