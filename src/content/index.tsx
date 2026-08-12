@@ -52,7 +52,7 @@ function openOverlay(): void {
   // Backdrop fade-in; the panel itself animates via CSS (quickmark-modal-enter).
   // Both are skipped under prefers-reduced-motion.
   if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    host.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease-out" });
+    host.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: "ease-out" });
   }
 
   root = createRoot(app);

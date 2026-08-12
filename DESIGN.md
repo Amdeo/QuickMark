@@ -368,10 +368,10 @@ The modal uses a carefully tuned three-layer shadow to feel lifted but not carto
 ```
 ### Modal Entrance
 
-The overlay opens with a subtle two-part entrance, tuned to feel instant rather than bouncy:
+The overlay opens with a two-part entrance with a light spring feel:
 
-- **Backdrop**: fades in from transparent over 160ms (`ease-out`), applied via the Web Animations API in the content script.
-- **Panel**: rises 10px and scales from 0.98 to 1 while fading in over 180ms (`cubic-bezier(0.2, 0.9, 0.3, 1)`), applied via the `.quickmark-modal-enter` CSS animation.
+- **Backdrop**: fades in from transparent over 200ms (`ease-out`), applied via the Web Animations API in the content script.
+- **Panel**: rises 16px and scales from 0.96 to 1 while fading in over 240ms with a slight overshoot (`cubic-bezier(0.34, 1.56, 0.64, 1)`), applied via the `.quickmark-modal-enter` CSS animation.
 
 The three-layer shadow itself is **static** — it does not animate. Both entrance animations are skipped under `prefers-reduced-motion` (the global CSS rule collapses the panel animation to instant, and the content script checks the media query before animating the backdrop). Close is instant with no exit animation.
 
@@ -494,7 +494,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 - Don't use edge-to-edge flat lists with hairline dividers between every row — the floating card pattern is the signature look.
 - Don't show all action buttons persistently — right actions should be hover/selection-only.
 - Don't use saturated accent colors for decorative purposes. Primary blue is for selection and CTAs only.
-- Don't make the entrance animation longer than ~180ms or add bounce/overshoot — it should feel instant, not playful.
+- Don't make the entrance animation longer than ~240ms or add heavy bounce — the spring overshoot is light by design.
 - Don't animate modal close — close is instant with no exit transition.
 - Don't use true black (`#000000`) for dark mode canvas — the warm-tinted near-black (`#11131A`) is intentional.
 - Don't introduce a second font family beyond Inter + system mono.
