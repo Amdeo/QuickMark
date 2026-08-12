@@ -419,7 +419,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
         className={[
           "mx-auto flex w-full max-w-3xl flex-col overflow-hidden bg-surface-container-lowest ring-1 ring-outline-variant/60",
           mode === "modal"
-            ? "h-[600px] rounded-2xl shadow-[0_24px_56px_-20px_rgba(15,23,42,0.22),_0_8px_24px_-12px_rgba(15,23,42,0.10),_0_1px_2px_rgba(15,23,42,0.04)]"
+            ? "quickmark-modal-enter h-[600px] rounded-2xl shadow-[0_24px_56px_-20px_rgba(15,23,42,0.22),_0_8px_24px_-12px_rgba(15,23,42,0.10),_0_1px_2px_rgba(15,23,42,0.04)]"
             : "min-h-screen shadow-none"
         ].join(" ")}
       >

@@ -366,7 +366,14 @@ The modal uses a carefully tuned three-layer shadow to feel lifted but not carto
 0 8px 24px -12px rgba(15, 23, 42, 0.10),    /* penumbra */
 0 1px 2px rgba(15, 23, 42, 0.04)            /* umbra */
 ```
-This shadow is **static** — it does not animate on open/close.
+### Modal Entrance
+
+The overlay opens with a subtle two-part entrance, tuned to feel instant rather than bouncy:
+
+- **Backdrop**: fades in from transparent over 160ms (`ease-out`), applied via the Web Animations API in the content script.
+- **Panel**: rises 10px and scales from 0.98 to 1 while fading in over 180ms (`cubic-bezier(0.2, 0.9, 0.3, 1)`), applied via the `.quickmark-modal-enter` CSS animation.
+
+The three-layer shadow itself is **static** — it does not animate. Both entrance animations are skipped under `prefers-reduced-motion` (the global CSS rule collapses the panel animation to instant, and the content script checks the media query before animating the backdrop). Close is instant with no exit animation.
 
 ### Overlay Backdrop
 
@@ -487,7 +494,8 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 - Don't use edge-to-edge flat lists with hairline dividers between every row — the floating card pattern is the signature look.
 - Don't show all action buttons persistently — right actions should be hover/selection-only.
 - Don't use saturated accent colors for decorative purposes. Primary blue is for selection and CTAs only.
-- Don't animate the modal open/close with scale or blur transitions — the system respects `prefers-reduced-motion` and should feel instant.
+- Don't make the entrance animation longer than ~180ms or add bounce/overshoot — it should feel instant, not playful.
+- Don't animate modal close — close is instant with no exit transition.
 - Don't use true black (`#000000`) for dark mode canvas — the warm-tinted near-black (`#11131A`) is intentional.
 - Don't introduce a second font family beyond Inter + system mono.
 - Don't make the modal taller than 600px — it must fit within a 13-inch laptop viewport with padding.
