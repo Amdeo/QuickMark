@@ -135,7 +135,7 @@ test("SearchApp initially renders only the first page of results", async () => {
   expect(html).not.toContain("Example 50");
 });
 
-test("SearchApp collapses same-domain results with an expand button", async () => {
+test("SearchApp collapses same-domain results until the group header is toggled", async () => {
   const results: BookmarkItem[] = Array.from({ length: 5 }, (_, index) => ({
     id: `h-${index}`,
     title: `Kimi ${index}`,
@@ -164,7 +164,7 @@ test("SearchApp collapses same-domain results with an expand button", async () =
 
   expect(html).toContain("kimi.com");
   expect(html).toContain("5 条");
-  expect(html).toContain("还有 2 条");
+  expect(html).not.toContain("还有");
   expect(html).toContain("Kimi 0");
   expect(html).toContain("Kimi 2");
   expect(html).not.toContain("Kimi 3");

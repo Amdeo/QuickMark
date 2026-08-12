@@ -139,6 +139,8 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<BookmarkItem | undefined>(undefined);
   const [expandedDomains, setExpandedDomains] = useState<ReadonlySet<string>>(new Set());
+  const [copyState, setCopyState] = useState<{ id: string; ok: boolean } | null>(null);
+  const copyTimerRef = useRef<number | undefined>(undefined);
   const { results, isLoading, error, folderPaths, refresh, markVisited } = useBookmarks(query, sourceFilter, timeFilter, sortMode);
 
   const effectiveTheme = getEffectiveTheme(themePref);
@@ -221,7 +223,6 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
         isGrouped,
         isExpanded,
         entries,
-        hiddenCount: group.items.length - items.length,
       };
     });
   }, [groups, expandedDomains]);
@@ -266,8 +267,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
       return;
     }
     if (query.trim()) {
-      await addSearchHistory(query);
-      setSearchHistory(getSearchHistory());
+      void addSearchHistory(query).then(() => setSearchHistory(getSearchHistory()));
     }
     await markVisited(selected.id);
     await openBookmark(selected, newTab);
@@ -293,6 +293,25 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     onClose?.();
   }
 
+  async function copyItemUrl(item: BookmarkItem): Promise<void> {
+    let ok = false;
+    try {
+      await copyUrlToClipboard(item.url);
+      ok = true;
+    } catch {
+      ok = false;
+    }
+    window.clearTimeout(copyTimerRef.current);
+    setCopyState({ id: item.id, ok });
+    copyTimerRef.current = window.setTimeout(() => setCopyState(null), 1600);
+  }
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
   function toggleDomain(domain: string): void {
     setExpandedDomains((prev) => {
       const next = new Set(prev);
@@ -303,10 +322,6 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
       }
       return next;
     });
-  }
-
-  function expandDomain(domain: string): void {
-    setExpandedDomains((prev) => (prev.has(domain) ? prev : new Set(prev).add(domain)));
   }
 
   useEffect(() => {
@@ -354,7 +369,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
-          setSelectedIndex((index) => Math.min(index + 1, results.length - 1));
+          setSelectedIndex((index) => Math.min(index + 1, visibleResults.length - 1));
         }
         if (event.key === "ArrowUp") {
           event.preventDefault();
@@ -396,7 +411,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
             active.selectionStart !== active.selectionEnd;
           if (hasInputSelection) return;
           event.preventDefault();
-          void copyUrlToClipboard(selected.url);
+          void copyItemUrl(selected);
         }
       }}
     >
@@ -603,7 +618,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                 <LoadingRow />
               </>
             ) : null}
-            {renderedGroups.map(({ group, isGrouped, isExpanded, entries, hiddenCount }) => (
+            {renderedGroups.map(({ group, isGrouped, isExpanded, entries }) => (
               <Fragment key={group.domain}>
                 {isGrouped ? (
                   <GroupHeader
@@ -621,20 +636,13 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                     query={query}
                     index={flatIndex}
                     isSelected={flatIndex === selectedIndex}
+                    isCopied={copyState?.id === item.id && copyState.ok}
+                    copyFailed={copyState?.id === item.id && !copyState.ok}
                     onMouseEnter={() => setSelectedIndex(flatIndex)}
                     onOpen={(newTab) => void openSelected(newTab)}
+                    onCopy={() => void copyItemUrl(item)}
                   />
                 ))}
-                {hiddenCount > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => expandDomain(group.domain)}
-                    className="mx-6 flex h-7 cursor-pointer items-center gap-1.5 self-start rounded-md px-2 text-[11px] text-outline transition-colors hover:bg-surface-container hover:text-on-surface"
-                  >
-                    <Icon name="expand_more" size={12} className="shrink-0" />
-                    <span>还有 {hiddenCount} 条</span>
-                  </button>
-                ) : null}
               </Fragment>
             ))}
           </div>
@@ -782,16 +790,22 @@ function BookmarkRow({
   query,
   index,
   isSelected,
+  isCopied,
+  copyFailed,
   onMouseEnter,
   onOpen,
+  onCopy,
 }: {
   item: BookmarkItem;
   folderPath: string[];
   query: string;
   index: number;
   isSelected: boolean;
+  isCopied: boolean;
+  copyFailed: boolean;
   onMouseEnter: () => void;
   onOpen: (newTab: boolean) => void;
+  onCopy: () => void;
 }) {
   const [imgSrc, setImgSrc] = useState(item.favicon);
   const displayFolderPath = getDisplayFolderPath(folderPath);
@@ -858,7 +872,7 @@ function BookmarkRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <Icon name="link" size={12} className="shrink-0 text-primary/70" />
-          <span className="truncate font-mono text-[13px] font-medium leading-5 text-primary" title={item.url}>
+          <span className="truncate font-mono text-[13px] font-semibold leading-5 text-primary" title={item.url}>
             <HighlightedText text={compactUrl(item.url)} query={query} />
           </span>
           {item.source === "history" && item.lastVisitedAt ? (
@@ -891,18 +905,23 @@ function BookmarkRow({
       <div className="flex shrink-0 items-center gap-1">
         <button
           type="button"
-          aria-label={`复制链接：${item.title}`}
-          title="复制链接"
+          aria-label={isCopied ? "已复制" : copyFailed ? "复制失败" : `复制链接：${item.title}`}
+          title={isCopied ? "已复制" : copyFailed ? "复制失败" : "复制链接"}
           onClick={(event) => {
             event.stopPropagation();
-            void copyUrlToClipboard(item.url);
+            onCopy();
           }}
           className={[
-            "flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-outline transition-colors hover:bg-surface-container hover:text-on-surface",
-            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            "flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors",
+            isCopied
+              ? "text-primary"
+              : copyFailed
+                ? "text-error"
+                : "text-outline hover:bg-surface-container hover:text-on-surface",
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           ].join(" ")}
         >
-          <Icon name="copy" size={13} />
+          <Icon name={isCopied ? "check" : copyFailed ? "close" : "copy"} size={13} />
         </button>
         <div
           className={[

@@ -1,15 +1,21 @@
 # QuickMark
 
-QuickMark is a keyboard-first Chrome Extension for saving and searching local bookmarks.
+QuickMark is a keyboard-first Chrome Extension for searching local bookmarks and browser history.
 
-## MVP Features
+## Features
 
-- `Command/Ctrl + Shift + S`: save the current tab to `chrome.storage.local`
 - `Command/Ctrl + Shift + K`: show a modal search palette over the current webpage
 - Fuzzy search by title, URL, and domain with Fuse.js
+- Combined bookmark + history results, grouped by domain
+- Filters: source (all / bookmark / history), time range (today / week / month)
+- Sort modes: smart, recent, frequent, title, created, relevance
 - `Enter`: open the selected result in the current tab
 - `Command/Ctrl + Enter`: open the selected result in a new tab
-- `Delete` or `Command/Ctrl + Backspace`: remove the selected bookmark
+- `Command/Ctrl + 1-9`: jump to the N-th visible result
+- `Command/Ctrl + C`: copy the selected result's URL
+- `Esc`: clear the query first, then close the palette
+- Search history (last 5 queries), web-search fallback for no results
+- Light / dark / system theme toggle
 
 ## Development
 
@@ -28,14 +34,14 @@ Load the extension from `dist` in Chrome:
 
 ## Architecture
 
-- `src/background`: MV3 service worker, command routing, active-tab saving
-- `src/content`: current-page modal overlay host
+- `src/background`: MV3 service worker, command routing, bookmark cache
+- `src/content`: current-page modal overlay host (Shadow DOM)
 - `src/domain`: pure bookmark and search logic
-- `src/repositories`: repository pattern over `chrome.storage.local`
-- `src/search`: React search page and hooks
+- `src/adapters`: Chrome bookmarks/history/favicon API adapters
+- `src/search`: React search UI and hooks
 - `public/manifest.json`: extension manifest copied into `dist`
 
-Data stays local in `chrome.storage.local` under `quickmark.bookmarks`.
+Bookmark and history data is cached in `chrome.storage.local` under `quickmark.bookmark-cache-v1`, refreshed in the background when bookmarks or history change.
 
 ## Shortcut Notes
 

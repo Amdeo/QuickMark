@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: QuickMark
-description: "A keyboard-first Chrome Extension command palette for searching local bookmarks and browser history. Built around Material Design 3 tokens softened toward the Arc / Notion aesthetic — bigger rounded corners (2px–16px), translucent borders, floating row cards, and a multi-layer soft shadow on the modal overlay. Light mode is the default palette with a cool-blue tint (#F9F9FF canvas); dark mode inverts into a near-black surface (#11131A). The only chromatic accents are the primary blue (royal in light, lavender in dark) for selection and CTAs, a secondary green for success states, and a tertiary orange for search highlights and the 'history' source badge. Typography is Inter at tight tracking with a system mono for keyboard shortcut chips. The entire experience is optimized for keyboard navigation: ArrowUp/Down, Enter, Ctrl/Cmd+Enter, 1–9 direct jump, Esc clear/close, and Ctrl/Cmd+C copy link."
+description: "A keyboard-first Chrome Extension command palette for searching local bookmarks and browser history. Built around Material Design 3 tokens softened toward the Arc / Notion aesthetic — bigger rounded corners (2px–16px), translucent borders, floating row cards, and a multi-layer soft shadow on the modal overlay. Light mode is the default palette with a warm-neutral tint (#F7F6F1 canvas); dark mode inverts into a near-black surface (#11131A). The only chromatic accents are the primary blue (royal in light, lavender in dark) for selection and CTAs, a secondary green for success states, and a tertiary orange for search highlights and the 'history' source badge. Typography is Inter at tight tracking with a system mono for keyboard shortcut chips. The entire experience is optimized for keyboard navigation: ArrowUp/Down, Enter, Ctrl/Cmd+Enter, 1–9 direct jump, Esc clear/close, and Ctrl/Cmd+C copy link."
 
 colors:
   # Primary (blue)
@@ -15,12 +15,12 @@ colors:
   on-primary-dark: "#002D6F"
 
   # Surfaces (light)
-  canvas-light: "#F9F9FF"
-  surface-1-light: "#FFFFFF"
-  surface-2-light: "#F1F3FF"
-  surface-3-light: "#E9EDFF"
-  surface-4-light: "#E1E8FD"
-  surface-5-light: "#DCE2F7"
+  canvas-light: "#F7F6F1"
+  surface-1-light: "#FDFCF8"
+  surface-2-light: "#F0EFEA"
+  surface-3-light: "#E9E8E2"
+  surface-4-light: "#E2E1DB"
+  surface-5-light: "#DDDCD6"
   hairline-light: "#C2C6D6"
   hairline-strong-light: "#727785"
 
@@ -245,7 +245,7 @@ components:
 
 QuickMark is a Chrome Extension command palette for searching local bookmarks and browser history. The UI runs in two modes — a **standalone popup page** (`mode="page"`) and a **modal overlay** injected via content script (`mode="modal"`). Both modes share the same component system but differ in container framing: the popup is a full-viewport page; the modal floats with a soft backdrop-blur scrim.
 
-The design language softens Material Design 3 into an Arc / Notion-like aesthetic: bigger rounded corners, translucent hairline borders instead of heavy dividers, floating row cards with inset selection rings, and a multi-layer soft shadow on the modal. The color system preserves MD3 semantics (surface, on-surface, primary, secondary, tertiary, error) but the values are tuned for a developer productivity tool — cool-blue-tinted light mode and a near-black dark mode.
+The design language softens Material Design 3 into an Arc / Notion-like aesthetic: bigger rounded corners, translucent hairline borders instead of heavy dividers, floating row cards with inset selection rings, and a multi-layer soft shadow on the modal. The color system preserves MD3 semantics (surface, on-surface, primary, secondary, tertiary, error) but the values are tuned for a developer productivity tool — warm-neutral-tinted light mode and a near-black dark mode.
 
 **Key Characteristics:**
 - **Keyboard-first interaction** — every action has a keyboard shortcut; mouse is secondary.
@@ -269,15 +269,15 @@ The design language softens Material Design 3 into an Arc / Notion-like aestheti
 - **Error Red** (`{colors.error}` #BA1A1A): Error states and error bar text.
 
 ### Surface Ladder
-The surface system follows MD3 semantics. In light mode, surfaces ascend from white toward a cool blue-gray; in dark mode, they descend from near-black toward charcoal.
+The surface system follows MD3 semantics. In light mode, surfaces ascend from white toward a warm off-white; in dark mode, they descend from near-black toward charcoal.
 
 **Light mode surfaces:**
-- **Canvas** (`{colors.canvas-light}` #F9F9FF): Page background (popup standalone mode).
-- **Surface 1** (`{colors.surface-1-light}` #FFFFFF): Modal container background, highest lifted surface.
-- **Surface 2** (`{colors.surface-2-light}` #F1F3FF): Footer background, history item hover, loading skeleton.
-- **Surface 3** (`{colors.surface-3-light}` #E9EDFF): Input background, row hover, Kbd background, favicon container.
-- **Surface 4** (`{colors.surface-4-light}` #E1E8FD): Number badge idle background.
-- **Surface 5** (`{colors.surface-5-light}` #DCE2F7): Surface variant, used for elevated panels.
+- **Canvas** (`{colors.canvas-light}` #F7F6F1): Page background (popup standalone mode).
+- **Surface 1** (`{colors.surface-1-light}` #FDFCF8): Modal container background, highest lifted surface.
+- **Surface 2** (`{colors.surface-2-light}` #F0EFEA): Footer background, history item hover, loading skeleton.
+- **Surface 3** (`{colors.surface-3-light}` #E9E8E2): Input background, row hover, Kbd background, favicon container.
+- **Surface 4** (`{colors.surface-4-light}` #E2E1DB): Number badge idle background.
+- **Surface 5** (`{colors.surface-5-light}` #DDDCD6): Surface variant, used for elevated panels.
 
 **Dark mode surfaces:**
 - **Canvas** (`{colors.canvas-dark}` #11131A): Page background.

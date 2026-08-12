@@ -47,7 +47,6 @@ function openOverlay(): void {
 
   shadow.append(styleLink, app);
   document.documentElement.appendChild(host);
-  document.addEventListener("keydown", handleOverlayKeyDown, true);
   host.addEventListener("click", closeOverlay);
 
   root = createRoot(app);
@@ -63,19 +62,9 @@ function closeOverlay(): void {
   if (host) {
     host.removeEventListener("click", closeOverlay);
   }
-  document.removeEventListener("keydown", handleOverlayKeyDown, true);
   root?.unmount();
   root = undefined;
   host?.remove();
-}
-
-function handleOverlayKeyDown(event: KeyboardEvent): void {
-  if (event.key !== "Escape") {
-    return;
-  }
-  event.preventDefault();
-  event.stopPropagation();
-  closeOverlay();
 }
 
 async function openBookmarkFromContentScript(item: BookmarkItem, _newTab: boolean): Promise<void> {
