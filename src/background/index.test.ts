@@ -44,6 +44,7 @@ function createChromeMock() {
         },
       },
       runtime: {
+        id: "test-extension",
         onMessage: {
           addListener: vi.fn((cb) => {
             listeners.runtime.add(cb);
@@ -118,7 +119,7 @@ test("QUICKMARK_GET_BOOKMARKS returns results and keeps message channel open", a
   const [messageListener] = [...chromeMock.listeners.runtime];
   const sendResponse = vi.fn();
 
-  const keepChannelOpen = messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, {}, sendResponse);
+  const keepChannelOpen = messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, { id: "test-extension" }, sendResponse);
 
   expect(keepChannelOpen).toBe(true);
   await new Promise((resolve) => setTimeout(resolve, 10));
@@ -137,22 +138,99 @@ test("QUICKMARK_GET_BOOKMARKS returns error response when loading fails", async 
   const [messageListener] = [...chromeMock.listeners.runtime];
   const sendResponse = vi.fn();
 
-  const keepChannelOpen = messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, {}, sendResponse);
+  const keepChannelOpen = messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, { id: "test-extension" }, sendResponse);
 
   expect(keepChannelOpen).toBe(true);
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(sendResponse).toHaveBeenCalledWith({ error: "bookmarks unavailable" });
 });
 
-test("QUICKMARK_OPEN_NEW_TAB creates a new tab", async () => {
+test("QUICKMARK_OPEN_URL opens in the sending tab when newTab is false", async () => {
   const chromeMock = createChromeMock();
   await importBackground(chromeMock);
 
   const [messageListener] = [...chromeMock.listeners.runtime];
 
-  messageListener({ type: "QUICKMARK_OPEN_NEW_TAB", url: "https://example.com" }, {}, vi.fn());
+  messageListener(
+    { type: "QUICKMARK_OPEN_URL", url: "https://example.com", newTab: false },
+    { id: "test-extension", tab: { id: 42 } },
+    vi.fn()
+  );
 
+  expect(chromeMock.api.tabs.update).toHaveBeenCalledWith(42, { url: "https://example.com" });
+  expect(chromeMock.api.tabs.create).not.toHaveBeenCalled();
+});
+
+test("QUICKMARK_OPEN_URL creates a new tab when newTab is true or the sender has no tab", async () => {
+  const chromeMock = createChromeMock();
+  await importBackground(chromeMock);
+
+  const [messageListener] = [...chromeMock.listeners.runtime];
+
+  messageListener(
+    { type: "QUICKMARK_OPEN_URL", url: "https://example.com", newTab: true },
+    { id: "test-extension", tab: { id: 42 } },
+    vi.fn()
+  );
+  messageListener(
+    { type: "QUICKMARK_OPEN_URL", url: "https://example.com", newTab: false },
+    { id: "test-extension" },
+    vi.fn()
+  );
+
+  expect(chromeMock.api.tabs.create).toHaveBeenCalledTimes(2);
   expect(chromeMock.api.tabs.create).toHaveBeenCalledWith({ url: "https://example.com", active: true });
+  expect(chromeMock.api.tabs.update).not.toHaveBeenCalled();
+});
+
+test("messages from other extensions are ignored", async () => {
+  const chromeMock = createChromeMock();
+  await importBackground(chromeMock);
+
+  const [messageListener] = [...chromeMock.listeners.runtime];
+
+  messageListener(
+    { type: "QUICKMARK_OPEN_URL", url: "https://example.com", newTab: true },
+    { id: "other-extension" },
+    vi.fn()
+  );
+
+  expect(chromeMock.api.tabs.create).not.toHaveBeenCalled();
+  expect(chromeMock.api.tabs.update).not.toHaveBeenCalled();
+});
+
+test("QUICKMARK_MARK_VISITED bumps usage stats in the served cache", async () => {
+  const chromeMock = createChromeMock();
+  getNativeBookmarks.mockResolvedValue([{ item: bookmark, folderPath: [] }]);
+  await importBackground(chromeMock);
+
+  const [messageListener] = [...chromeMock.listeners.runtime];
+  const sendResponse = vi.fn();
+
+  messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, { id: "test-extension" }, sendResponse);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  messageListener(
+    { type: "QUICKMARK_MARK_VISITED", id: "bookmark-1" },
+    { id: "test-extension", tab: { id: 1 } },
+    vi.fn()
+  );
+
+  sendResponse.mockClear();
+  messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, { id: "test-extension" }, sendResponse);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  expect(sendResponse).toHaveBeenCalledWith(
+    expect.objectContaining({
+      cached: true,
+      results: [
+        {
+          item: expect.objectContaining({ visitCount: 1, lastVisitedAt: expect.any(Number) }),
+          folderPath: [],
+        },
+      ],
+    })
+  );
 });
 
 test("QUICKMARK_TRIGGER_SEARCH toggles search overlay", async () => {
@@ -162,7 +240,7 @@ test("QUICKMARK_TRIGGER_SEARCH toggles search overlay", async () => {
 
   const [messageListener] = [...chromeMock.listeners.runtime];
 
-  messageListener({ type: "QUICKMARK_TRIGGER_SEARCH" }, {}, vi.fn());
+  messageListener({ type: "QUICKMARK_TRIGGER_SEARCH" }, { id: "test-extension" }, vi.fn());
 
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(chromeMock.api.tabs.sendMessage).toHaveBeenCalledWith(1, { type: "QUICKMARK_TOGGLE" });
@@ -191,7 +269,7 @@ test("bookmark and history events mark cache stale", async () => {
   const sendResponse = vi.fn();
 
   // First call populates the cache.
-  messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, {}, sendResponse);
+  messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, { id: "test-extension" }, sendResponse);
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ cached: false }));
 
@@ -200,7 +278,7 @@ test("bookmark and history events mark cache stale", async () => {
   onChanged();
 
   sendResponse.mockClear();
-  messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, {}, sendResponse);
+  messageListener({ type: "QUICKMARK_GET_BOOKMARKS" }, { id: "test-extension" }, sendResponse);
   await new Promise((resolve) => setTimeout(resolve, 10));
 
   expect(getNativeBookmarks).toHaveBeenCalledTimes(2);

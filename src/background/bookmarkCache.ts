@@ -92,5 +92,21 @@ export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: Bookm
     markStale(): void {
       isStale = true;
     },
+    /**
+     * Bump usage stats for an item the user just opened. Persisted
+     * through storage so smart/frequent sorting survives the next
+     * palette open; a later stale refresh reconciles with the real
+     * chrome.history data.
+     */
+    markVisited(id: string): void {
+      if (!cachedResults) return;
+      const result = cachedResults.find((entry) => entry.item.id === id);
+      if (!result) return;
+      result.item.visitCount += 1;
+      result.item.lastVisitedAt = Date.now();
+      void options.storage?.write(cachedResults).catch(() => {
+        // In-memory cache is still updated if persistence fails.
+      });
+    },
   };
 }

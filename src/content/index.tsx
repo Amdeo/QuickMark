@@ -8,7 +8,8 @@ const STYLE_ID = "quickmark-overlay-style";
 
 let root: Root | undefined;
 
-chrome.runtime.onMessage.addListener((message: { type?: string }) => {
+chrome.runtime.onMessage.addListener((message: { type?: string }, sender: chrome.runtime.MessageSender) => {
+  if (sender.id !== chrome.runtime.id) return;
   if (message.type === "QUICKMARK_TOGGLE") {
     toggleOverlay();
   }
@@ -73,9 +74,9 @@ function closeOverlay(): void {
   host?.remove();
 }
 
-async function openBookmarkFromContentScript(item: BookmarkItem, _newTab: boolean): Promise<void> {
+async function openBookmarkFromContentScript(item: BookmarkItem, newTab: boolean): Promise<void> {
   if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
-    await chrome.runtime.sendMessage({ type: "QUICKMARK_OPEN_NEW_TAB", url: item.url });
+    await chrome.runtime.sendMessage({ type: "QUICKMARK_OPEN_URL", url: item.url, newTab });
   } else {
     window.open(item.url, "_blank");
   }

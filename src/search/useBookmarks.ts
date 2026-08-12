@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BookmarkItem } from "../domain/types";
-import { createBookmarkSearchIndex, searchBookmarks } from "../domain/search";
+import { createBookmarkSearchIndex, filterBySource, filterByTime, searchBookmarks } from "../domain/search";
 import type { SortMode, SourceFilter, TimeFilter } from "../domain/search";
 import { BOOKMARK_CACHE_KEY } from "../background/cacheKeys";
 import type { BookmarkResult } from "../background/bookmarkCache";
@@ -140,9 +140,25 @@ export function useBookmarks(
   }, [applyBookmarkState]);
 
   const fuse = useMemo(() => createBookmarkSearchIndex(bookmarks), [bookmarks]);
+
+  // When a source/time filter is active, the search runs against the
+  // filtered set. Build that index once per (items, filters) instead of
+  // on every keystroke.
+  const filteredItems = useMemo(
+    () =>
+      sourceFilter === "all" && timeFilter === "all"
+        ? bookmarks
+        : filterByTime(filterBySource(bookmarks, sourceFilter), timeFilter),
+    [bookmarks, sourceFilter, timeFilter]
+  );
+  const filteredFuse = useMemo(
+    () => (filteredItems === bookmarks ? fuse : createBookmarkSearchIndex(filteredItems)),
+    [filteredItems, fuse]
+  );
+
   const results = useMemo(
-    () => searchBookmarks(bookmarks, query, fuse, sourceFilter, timeFilter, sortMode),
-    [bookmarks, query, fuse, sourceFilter, timeFilter, sortMode]
+    () => searchBookmarks(bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredFuse),
+    [bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredFuse]
   );
 
   const markVisited = useCallback(async (id: string) => {
@@ -153,6 +169,13 @@ export function useBookmarks(
           : item
       )
     );
+    // Persist through the background cache so usage-aware sorting
+    // survives the next palette open.
+    try {
+      await chrome.runtime.sendMessage({ type: "QUICKMARK_MARK_VISITED", id });
+    } catch {
+      // Best effort: the local update already applied.
+    }
   }, []);
 
   return { bookmarks, results, folderPaths, isLoading, error, refresh, markVisited };

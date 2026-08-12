@@ -77,3 +77,33 @@ test("bookmark cache restores persisted results before refreshing", async () => 
   expect(loadBookmarks).toHaveBeenCalledTimes(1);
   expect(storage.write).toHaveBeenCalledWith([{ item: updatedBookmark, folderPath: [] }]);
 });
+
+test("markVisited bumps usage stats and persists them through storage", async () => {
+  const loadBookmarks = vi.fn().mockResolvedValue([{ item: bookmark, folderPath: [] }]);
+  const storage = {
+    read: vi.fn().mockResolvedValue(undefined),
+    write: vi.fn().mockResolvedValue(undefined),
+  };
+  const cache = createBookmarkCache(loadBookmarks, { storage });
+
+  await cache.getBookmarks();
+  storage.write.mockClear();
+
+  cache.markVisited("bookmark-1");
+
+  const { results } = await cache.getBookmarks();
+  expect(results[0].item.visitCount).toBe(1);
+  expect(results[0].item.lastVisitedAt).toBeGreaterThan(0);
+  expect(storage.write).toHaveBeenCalledWith([
+    { item: { ...bookmark, visitCount: 1, lastVisitedAt: expect.any(Number) }, folderPath: [] },
+  ]);
+});
+
+test("markVisited is a no-op for unknown ids or an empty cache", async () => {
+  const cache = createBookmarkCache(vi.fn().mockResolvedValue([]));
+
+  expect(() => cache.markVisited("missing")).not.toThrow();
+
+  const { results } = await cache.getBookmarks();
+  expect(results).toEqual([]);
+});

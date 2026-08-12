@@ -33,13 +33,27 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message: { type?: string; url?: string; preferFresh?: boolean }, _sender, sendResponse) => {
-  if (message.type === "QUICKMARK_OPEN_NEW_TAB" && message.url) {
-    void chrome.tabs.create({ url: message.url, active: true });
+chrome.runtime.onMessage.addListener((message: { type?: string; url?: string; newTab?: boolean; id?: string; preferFresh?: boolean }, sender, sendResponse) => {
+  // Only accept messages from this extension's own contexts
+  // (content scripts, popup, etc.), never from other extensions or pages.
+  if (sender.id !== chrome.runtime.id) {
+    return;
+  }
+
+  if (message.type === "QUICKMARK_OPEN_URL" && message.url) {
+    if (!message.newTab && sender.tab?.id != null) {
+      void chrome.tabs.update(sender.tab.id, { url: message.url });
+    } else {
+      void chrome.tabs.create({ url: message.url, active: true });
+    }
   }
 
   if (message.type === "QUICKMARK_TRIGGER_SEARCH") {
     void toggleSearchOverlay();
+  }
+
+  if (message.type === "QUICKMARK_MARK_VISITED" && message.id) {
+    bookmarkCache.markVisited(message.id);
   }
 
   if (message.type === "QUICKMARK_GET_BOOKMARKS") {

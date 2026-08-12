@@ -10,6 +10,12 @@ test("isSearchablePageUrl rejects extension and browser internal pages", () => {
   expect(isSearchablePageUrl("devtools://devtools/bundled/inspector.html")).toBe(false);
 });
 
+test("isSearchablePageUrl rejects unparseable URLs conservatively", () => {
+  expect(isSearchablePageUrl("")).toBe(false);
+  expect(isSearchablePageUrl("not a url")).toBe(false);
+  expect(isSearchablePageUrl("http://")).toBe(false);
+});
+
 test("getNativeBookmarks filters extension pages from bookmarks and history", async () => {
   const originalChrome = globalThis.chrome;
 

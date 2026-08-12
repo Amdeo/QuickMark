@@ -144,7 +144,8 @@ export function searchBookmarks(
   fuse = createBookmarkSearchIndex(items),
   sourceFilter: SourceFilter = "all",
   timeFilter: TimeFilter = "all",
-  sortMode: SortMode = "smart"
+  sortMode: SortMode = "smart",
+  filteredFuse?: Fuse<BookmarkItem>
 ): BookmarkItem[] {
   const textQuery = query.trim();
   const filtered = filterByTime(filterBySource(items, sourceFilter), timeFilter);
@@ -155,7 +156,7 @@ export function searchBookmarks(
   }
 
   const needsCustomIndex = sourceFilter !== "all" || timeFilter !== "all";
-  const searchFuse = needsCustomIndex ? createBookmarkSearchIndex(filtered) : fuse;
+  const searchFuse = needsCustomIndex ? (filteredFuse ?? createBookmarkSearchIndex(filtered)) : fuse;
 
   const matches = searchFuse.search(textQuery);
   if (sortMode === "relevance") {

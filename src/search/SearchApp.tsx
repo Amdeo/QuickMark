@@ -30,16 +30,41 @@ const SORT_MODES: Array<{ value: SortMode; label: string }> = [
 
 type ThemePreference = "light" | "dark" | "system";
 
-function getThemePreference(): ThemePreference {
-  try {
-    const raw = localStorage.getItem(THEME_KEY);
-    if (raw === "light" || raw === "dark" || raw === "system") return raw;
-  } catch { /* ignore */ }
-  return "system";
+// Search history and theme live in chrome.storage.local, NOT localStorage:
+// the content script shares the host page's origin, so localStorage would
+// scatter the data per-site and expose the queries to visited pages.
+
+let memoryThemePreference: ThemePreference | undefined;
+let themeLoadingPromise: Promise<ThemePreference> | undefined;
+
+async function ensureThemePreferenceLoaded(): Promise<ThemePreference> {
+  if (memoryThemePreference !== undefined) return memoryThemePreference;
+  if (!themeLoadingPromise) {
+    themeLoadingPromise = (async () => {
+      let pref: ThemePreference = "system";
+      try {
+        const result = await chrome.storage.local.get(THEME_KEY);
+        const raw = result[THEME_KEY];
+        if (raw === "light" || raw === "dark" || raw === "system") {
+          pref = raw;
+        }
+      } catch {
+        /* keep default */
+      }
+      memoryThemePreference = pref;
+      return pref;
+    })();
+  }
+  return themeLoadingPromise;
 }
 
-function saveThemePreference(theme: ThemePreference) {
-  localStorage.setItem(THEME_KEY, theme);
+async function saveThemePreference(theme: ThemePreference): Promise<void> {
+  memoryThemePreference = theme;
+  try {
+    await chrome.storage.local.set({ [THEME_KEY]: theme });
+  } catch {
+    /* ignore */
+  }
 }
 
 function getEffectiveTheme(preference: ThemePreference): "light" | "dark" {
@@ -65,7 +90,9 @@ async function ensureSearchHistoryLoaded(): Promise<void> {
     try {
       const result = await chrome.storage.local.get(HISTORY_KEY);
       const raw = result[HISTORY_KEY];
-      memorySearchHistory = Array.isArray(raw) ? raw : [];
+      memorySearchHistory = Array.isArray(raw)
+        ? raw.filter((entry): entry is string => typeof entry === "string")
+        : [];
     } catch {
       memorySearchHistory = [];
     }
@@ -130,7 +157,8 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [visibleResultCount, setVisibleResultCount] = useState(RESULT_PAGE_SIZE);
-  const [themePref, setThemePref] = useState<ThemePreference>(getThemePreference);
+  const [themePref, setThemePref] = useState<ThemePreference>("system");
+  const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">(() => getEffectiveTheme("system"));
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("smart");
@@ -143,14 +171,36 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   const copyTimerRef = useRef<number | undefined>(undefined);
   const { results, isLoading, error, folderPaths, refresh, markVisited } = useBookmarks(query, sourceFilter, timeFilter, sortMode);
 
-  const effectiveTheme = getEffectiveTheme(themePref);
-
   // Address-bar semantics: a complete URL or bare domain navigates directly.
   const directUrl = useMemo(() => resolveDirectUrl(query), [query]);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Load the persisted theme preference once, then keep the effective
+  // theme in sync with the preference and with system theme changes.
+  useEffect(() => {
+    let cancelled = false;
+    ensureThemePreferenceLoaded().then((pref) => {
+      if (!cancelled) setThemePref(pref);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setEffectiveTheme(getEffectiveTheme(themePref));
+  }, [themePref]);
+
+  useEffect(() => {
+    if (themePref !== "system" || typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => setEffectiveTheme(getEffectiveTheme("system"));
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [themePref]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -446,7 +496,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
         className={[
           "mx-auto flex w-full max-w-3xl flex-col overflow-hidden bg-surface-container-lowest ring-1 ring-outline-variant/60",
           mode === "modal"
-            ? "quickmark-modal-enter h-[600px] rounded-2xl shadow-[0_24px_56px_-20px_rgba(15,23,42,0.22),_0_8px_24px_-12px_rgba(15,23,42,0.10),_0_1px_2px_rgba(15,23,42,0.04)]"
+            ? "quickmark-modal-enter h-[600px] max-h-[85vh] rounded-2xl shadow-[0_24px_56px_-20px_rgba(15,23,42,0.22),_0_8px_24px_-12px_rgba(15,23,42,0.10),_0_1px_2px_rgba(15,23,42,0.04)]"
             : "min-h-screen shadow-none"
         ].join(" ")}
       >
@@ -741,7 +791,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                 const next: ThemePreference =
                   themePref === "system" ? "light" : themePref === "light" ? "dark" : "system";
                 setThemePref(next);
-                saveThemePreference(next);
+                void saveThemePreference(next);
               }}
               className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[11px] text-outline transition-colors hover:bg-surface-container hover:text-on-surface"
             >

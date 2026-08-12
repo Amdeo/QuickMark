@@ -22,7 +22,8 @@ export function isSearchablePageUrl(url: string): boolean {
     ]);
     return !blockedProtocols.has(new URL(url).protocol.toLowerCase());
   } catch {
-    return true;
+    // Unparseable URLs are not injectable pages; be conservative.
+    return false;
   }
 }
 
