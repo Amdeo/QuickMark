@@ -692,33 +692,49 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                 <LoadingRow />
               </>
             ) : null}
-            {renderedGroups.map(({ group, isGrouped, isExpanded, entries }) => (
-              <Fragment key={group.domain}>
-                {isGrouped ? (
-                  <GroupHeader
-                    domain={group.domain}
-                    count={group.items.length}
-                    isExpanded={isExpanded}
-                    onToggle={() => toggleDomain(group.domain)}
-                  />
-                ) : null}
-                {entries.map(({ item, flatIndex }) => (
-                  <BookmarkRow
-                    key={item.id}
-                    item={item}
-                    folderPath={folderPaths.get(item.id) ?? []}
-                    query={query}
-                    index={flatIndex}
-                    isSelected={flatIndex === selectedIndex}
-                    isCopied={copyState?.id === item.id && copyState.ok}
-                    copyFailed={copyState?.id === item.id && !copyState.ok}
-                    onMouseEnter={() => setSelectedIndex(flatIndex)}
-                    onOpen={(newTab) => void openSelected(newTab)}
-                    onCopy={() => void copyItemUrl(item)}
-                  />
-                ))}
-              </Fragment>
-            ))}
+            {renderedGroups.map(({ group, isGrouped, isExpanded, entries }) => {
+              // 组内条目：整组卡片化（带底色容器 + 圆角边框），
+              // 并按组内奇偶位置交替底色，让每条记录成为可区分的块。
+              const rows = entries.map(({ item, flatIndex }, rowIndex) => (
+                <BookmarkRow
+                  key={item.id}
+                  item={item}
+                  folderPath={folderPaths.get(item.id) ?? []}
+                  query={query}
+                  index={flatIndex}
+                  isSelected={flatIndex === selectedIndex}
+                  isCopied={copyState?.id === item.id && copyState.ok}
+                  copyFailed={copyState?.id === item.id && !copyState.ok}
+                  grouped={isGrouped}
+                  alternate={isGrouped && rowIndex % 2 === 1}
+                  onMouseEnter={() => setSelectedIndex(flatIndex)}
+                  onOpen={(newTab) => void openSelected(newTab)}
+                  onCopy={() => void copyItemUrl(item)}
+                />
+              ));
+              return (
+                <Fragment key={group.domain}>
+                  {isGrouped ? (
+                    <GroupHeader
+                      domain={group.domain}
+                      count={group.items.length}
+                      isExpanded={isExpanded}
+                      onToggle={() => toggleDomain(group.domain)}
+                    />
+                  ) : null}
+                  {isGrouped ? (
+                    <div
+                      role="presentation"
+                      className="mx-2 overflow-hidden rounded-xl bg-surface-container-low ring-1 ring-outline-variant/25"
+                    >
+                      {rows}
+                    </div>
+                  ) : (
+                    rows
+                  )}
+                </Fragment>
+              );
+            })}
           </div>
 
           {error ? (
@@ -868,6 +884,8 @@ function BookmarkRow({
   isSelected,
   isCopied,
   copyFailed,
+  grouped = false,
+  alternate = false,
   onMouseEnter,
   onOpen,
   onCopy,
@@ -879,6 +897,10 @@ function BookmarkRow({
   isSelected: boolean;
   isCopied: boolean;
   copyFailed: boolean;
+  /** 是否位于域名分组卡片内（取消外边距与独立圆角，由卡片容器裁切）。 */
+  grouped?: boolean;
+  /** 组内交替底色：奇数位置的行使用更深的底色形成斑马纹。 */
+  alternate?: boolean;
   onMouseEnter: () => void;
   onOpen: (newTab: boolean) => void;
   onCopy: () => void;
@@ -903,10 +925,17 @@ function BookmarkRow({
       onMouseEnter={onMouseEnter}
       onClick={(event) => onOpen(event.metaKey || event.ctrlKey)}
       className={[
-        "group relative mx-2 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-150",
+        "group relative flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors duration-150",
+        grouped ? "mx-0 rounded-none" : "mx-2 rounded-xl",
+        // 组内卡片：奇数行透出容器底色，偶数行加深形成斑马纹；
+        // hover 统一用更深的 highest，保证两种行上都有高亮反馈。
         isSelected
           ? "bg-primary-fixed/40 ring-1 ring-inset ring-primary/15"
-          : "hover:bg-surface-container-low/70"
+          : grouped
+            ? alternate
+              ? "bg-surface-container-high hover:bg-surface-container-highest"
+              : "hover:bg-surface-container-highest"
+            : "hover:bg-surface-container-low/70"
       ].join(" ")}
     >
       {/* Favicon + Number Badge */}
