@@ -78,6 +78,55 @@ test("bookmark cache restores persisted results before refreshing", async () => 
   expect(storage.write).toHaveBeenCalledWith([{ item: updatedBookmark, folderPath: [] }]);
 });
 
+test("bookmark cache treats an empty persisted cache as a cache hit", async () => {
+  const loadBookmarks = vi.fn().mockResolvedValue([]);
+  const storage = {
+    read: vi.fn().mockResolvedValue([]),
+    write: vi.fn().mockResolvedValue(undefined),
+  };
+  const cache = createBookmarkCache(loadBookmarks, { storage });
+
+  const restored = await cache.getBookmarks();
+
+  expect(restored.results).toEqual([]);
+  expect(restored.cached).toBe(true);
+  expect(loadBookmarks).toHaveBeenCalledTimes(1);
+});
+
+test("bookmark cache keeps an invalidation raised during a refresh", async () => {
+  const bookmarkResults = [{ item: bookmark, folderPath: [] }];
+  const refreshedResults = [{ item: updatedBookmark, folderPath: [] }];
+  const retryResults = [{ item: { ...updatedBookmark, title: "Retried" }, folderPath: [] }];
+  let resolveRefresh!: (results: typeof refreshedResults) => void;
+  let resolveRetry!: (results: typeof retryResults) => void;
+  const refreshPromise = new Promise<typeof refreshedResults>((resolve) => {
+    resolveRefresh = resolve;
+  });
+  const retryPromise = new Promise<typeof retryResults>((resolve) => {
+    resolveRetry = resolve;
+  });
+  const loadBookmarks = vi
+    .fn()
+    .mockResolvedValueOnce(bookmarkResults)
+    .mockReturnValueOnce(refreshPromise)
+    .mockReturnValueOnce(retryPromise);
+  const cache = createBookmarkCache(loadBookmarks);
+
+  await cache.getBookmarks();
+  cache.markStale();
+  await cache.getBookmarks();
+  cache.markStale();
+  resolveRefresh(refreshedResults);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  const stillStale = await cache.getBookmarks();
+
+  expect(stillStale.cached).toBe(true);
+  expect(stillStale.refreshing).toBe(true);
+  expect(loadBookmarks).toHaveBeenCalledTimes(3);
+  resolveRetry(retryResults);
+});
+
 test("markVisited bumps usage stats and persists them through storage", async () => {
   const loadBookmarks = vi.fn().mockResolvedValue([{ item: bookmark, folderPath: [] }]);
   const storage = {

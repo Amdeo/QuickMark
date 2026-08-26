@@ -1,9 +1,9 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { BookmarkItem } from "../domain/types";
 import { Icon } from "../components/Icon";
 import { getExtensionFaviconUrl } from "../adapters/favicon";
 import { useBookmarks } from "./useBookmarks";
-import { getDisplayFolderPath, getNextVisibleResultCount, isNearScrollBottom, splitQueryMatch, formatRelativeTime, compactUrl } from "./display";
+import { getDisplayFolderPath, getNextVisibleResultCount, getScrollTarget, isNearScrollBottom, splitQueryMatch, formatRelativeTime, compactUrl } from "./display";
 import { groupByDomain, resolveDirectUrl, type SortMode, type SourceFilter, type TimeFilter } from "../domain/search";
 
 const HISTORY_KEY = "quickmark-search-history";
@@ -145,6 +145,27 @@ function isComposingEvent(event: { nativeEvent: KeyboardEvent }): boolean {
   return event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
 }
 
+const SCROLL_ANCHOR = 88; // 选中项期望停留在滚动容器顶部下方的舒适位置
+
+function scrollSelectedRowIntoView(container: HTMLElement | null, row: HTMLElement | null): void {
+  if (!container || !row) return;
+
+  const target = getScrollTarget({
+    scrollTop: container.scrollTop,
+    clientHeight: container.clientHeight,
+    scrollHeight: container.scrollHeight,
+    containerTop: container.getBoundingClientRect().top,
+    rowTop: row.getBoundingClientRect().top,
+    rowHeight: row.getBoundingClientRect().height,
+    anchor: SCROLL_ANCHOR,
+  });
+
+  if (target === undefined) return;
+
+  // 键盘连续反向操作必须立即采用最新位置，避免异步动画抢占下一个目标。
+  container.scrollTop = target;
+}
+
 type SearchAppProps = {
   mode?: "page" | "modal";
   onClose?: () => void;
@@ -163,6 +184,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const selectedItemRef = useRef<BookmarkItem | undefined>(undefined);
   const [expandedDomains, setExpandedDomains] = useState<ReadonlySet<string>>(new Set());
   const [copyState, setCopyState] = useState<{ id: string; ok: boolean } | null>(null);
@@ -284,6 +306,14 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
 
   const selected = visibleResults[selectedIndex];
 
+  useLayoutEffect(() => {
+    if (!selected) return;
+    const selectedRow = listRef.current
+      ? listRef.current.querySelector<HTMLDivElement>('[role="option"][aria-selected="true"]')
+      : null;
+    scrollSelectedRowIntoView(listRef.current, selectedRow);
+  }, [selected?.id, visibleResults]);
+
   useEffect(() => {
     if (selectedIndex > Math.max(visibleResults.length - 1, 0)) {
       setSelectedIndex(Math.max(visibleResults.length - 1, 0));
@@ -401,7 +431,13 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   useEffect(() => {
     if (!sortMenuOpen) return;
     function onPointerDown(event: MouseEvent | TouchEvent) {
-      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+      // 内容脚本把面板渲染在 shadow root 中，事件穿过 shadow 边界到达
+      // document 时 event.target 会被重定向为宿主机，导致菜单内的点击被
+      // 误判为"外部点击"而立即关闭。composedPath() 能取到真实命中点。
+      const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+      const isInsideMenu =
+        sortMenuRef.current !== null && path.some((node) => sortMenuRef.current!.contains(node as Node));
+      if (!isInsideMenu) {
         setSortMenuOpen(false);
       }
     }
@@ -586,26 +622,35 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                 role="menu"
                 className="absolute right-0 top-full z-20 mt-1.5 w-36 rounded-lg border border-outline-variant/40 bg-surface-container p-1 shadow-xl"
               >
-                {SORT_MODES.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={sortMode === value}
-                    onClick={() => {
-                      setSortMode(value);
-                      setSortMenuOpen(false);
-                    }}
-                    className={[
-                      "flex h-7 w-full cursor-pointer items-center rounded-md px-2 text-left text-[12px] transition-colors",
-                      sortMode === value
-                        ? "bg-primary/15 font-medium text-primary"
-                        : "text-outline hover:bg-surface-container-high hover:text-on-surface"
-                    ].join(" ")}
-                  >
-                    {label}
-                  </button>
-                ))}
+                {SORT_MODES.map(({ value, label }) => {
+                  // 相关度优先只在有搜索词时有意义；无关键词时禁用，
+                  // 避免用户以为排序失效。
+                  const relevanceWithoutQuery = value === "relevance" && !query.trim();
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={sortMode === value}
+                      disabled={relevanceWithoutQuery}
+                      title={relevanceWithoutQuery ? "输入关键词后可用" : undefined}
+                      onClick={() => {
+                        setSortMode(value);
+                        setSortMenuOpen(false);
+                      }}
+                      className={[
+                        "flex h-7 w-full cursor-pointer items-center rounded-md px-2 text-left text-[12px] transition-colors",
+                        relevanceWithoutQuery
+                          ? "cursor-not-allowed text-outline/40"
+                          : sortMode === value
+                            ? "bg-primary/15 font-medium text-primary"
+                            : "text-outline hover:bg-surface-container-high hover:text-on-surface",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             ) : null}
           </div>
@@ -613,6 +658,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
 
         {/* Content Area */}
         <div
+          ref={listRef}
           className="flex-1 overflow-y-auto py-2"
           onScroll={(event) => {
             if (isNearScrollBottom(event.currentTarget)) {
@@ -908,12 +954,6 @@ function BookmarkRow({
   const [imgSrc, setImgSrc] = useState(item.favicon);
   const displayFolderPath = getDisplayFolderPath(folderPath);
   const rowRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isSelected && rowRef.current) {
-      rowRef.current.scrollIntoView({ block: "nearest" });
-    }
-  }, [isSelected]);
 
   return (
     <div

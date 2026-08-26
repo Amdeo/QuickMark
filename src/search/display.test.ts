@@ -1,4 +1,4 @@
-import { getDisplayFolderPath, getNextVisibleResultCount, isNearScrollBottom, splitQueryMatch, formatRelativeTime, compactUrl } from "./display";
+import { getDisplayFolderPath, getNextVisibleResultCount, getScrollTarget, isNearScrollBottom, splitQueryMatch, formatRelativeTime, compactUrl } from "./display";
 
 test("getDisplayFolderPath keeps short paths unchanged", () => {
   expect(getDisplayFolderPath(["前端", "React"])).toBe("前端 > React");
@@ -53,4 +53,47 @@ test("compactUrl strips protocol, www, and trailing slashes", () => {
   expect(compactUrl("https://www.example.com/")).toBe("example.com");
   expect(compactUrl("http://example.com/a/b?q=1")).toBe("example.com/a/b?q=1");
   expect(compactUrl("https://kimi.com")).toBe("kimi.com");
+});
+
+describe("getScrollTarget", () => {
+  const base = {
+    scrollTop: 200,
+    clientHeight: 600,
+    scrollHeight: 1200,
+    containerTop: 100,
+    rowHeight: 40,
+    anchor: 88,
+  };
+
+  test("moves upward when the selected row crosses the top anchor", () => {
+    // 行视口位置 -150 < 88：向上滚 238，边界裁剪为 0。
+    expect(getScrollTarget({ ...base, rowTop: -50 })).toBe(0);
+    expect(getScrollTarget({ ...base, scrollTop: 600, rowTop: 50 })).toBe(462);
+  });
+
+  test("moves downward when the selected row crosses the bottom anchor", () => {
+    // 行底 540 > 600-88：向下滚到行底落在锚点带上沿（600-88）。
+    expect(getScrollTarget({ ...base, rowTop: 600 })).toBe(228);
+  });
+
+  test("clamps the target to the scroll boundaries", () => {
+    expect(getScrollTarget({ ...base, scrollTop: 50, rowTop: -50 })).toBe(0);
+    expect(getScrollTarget({ ...base, rowTop: 800 })).toBe(428);
+  });
+
+  test("returns no target when the selected row is comfortably visible", () => {
+    expect(getScrollTarget({ ...base, rowTop: 200 })).toBeUndefined();
+  });
+
+  test("scrolls the row back into view when it is above the viewport at the bottom", () => {
+    // 底部回归：行已滚出视口上方，必须向上滚动而不是被钳制在 maxScroll。
+    const atBottom = {
+      ...base,
+      scrollTop: 600,
+      clientHeight: 600,
+      scrollHeight: 1200,
+      rowTop: 20, // 相对容器 100 上方 80px，行顶在视口 -80 处
+    };
+    expect(getScrollTarget(atBottom)).toBe(432);
+  });
 });

@@ -64,6 +64,38 @@ export function compactUrl(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "");
 }
 
+export type ScrollTargetMetrics = ScrollMetrics & {
+  containerTop: number;
+  rowTop: number;
+  rowHeight: number;
+  anchor: number;
+};
+
+export function getScrollTarget(metrics: ScrollTargetMetrics): number | undefined {
+  // 行在视口内的位置：rowTop - containerTop 已包含当前滚动偏移的影响。
+  const viewportTop = metrics.rowTop - metrics.containerTop;
+  const viewportBottom = viewportTop + metrics.rowHeight;
+  const maxScroll = Math.max(0, metrics.scrollHeight - metrics.clientHeight);
+
+  if (viewportTop < metrics.anchor) {
+    // 行高于顶部锚点：向上滚，直到行顶落到锚点位置。
+    return Math.max(0, Math.min(maxScroll, metrics.scrollTop - (metrics.anchor - viewportTop)));
+  }
+
+  if (viewportBottom > metrics.clientHeight - metrics.anchor) {
+    // 行低于底部锚点：向下滚行底到锚点带下沿。
+    return Math.max(
+      0,
+      Math.min(
+        maxScroll,
+        metrics.scrollTop + (viewportBottom - (metrics.clientHeight - metrics.anchor))
+      )
+    );
+  }
+
+  return undefined;
+}
+
 export function isNearScrollBottom(metrics: ScrollMetrics, threshold = 120): boolean {
   return metrics.scrollTop + metrics.clientHeight >= metrics.scrollHeight - threshold;
 }

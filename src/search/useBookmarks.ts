@@ -66,6 +66,10 @@ async function getBookmarksFromStorage(storage: StorageAreaLike): Promise<Bookma
   return bookmarkResultsToState(cachedResults as BookmarkResult[]);
 }
 
+function getSearchableSignature(items: BookmarkItem[]): string {
+  return JSON.stringify(items.map(({ id, title, url, domain }) => [id, title, url, domain]));
+}
+
 export function useBookmarks(
   query: string,
   sourceFilter: SourceFilter = "all",
@@ -141,6 +145,7 @@ export function useBookmarks(
 
   // 拼音字典按需加载：书签含中文标题时才拉取字典，就绪后重建搜索索引。
   const [pinyinReady, setPinyinReady] = useState(false);
+  const searchableSignature = useMemo(() => getSearchableSignature(bookmarks), [bookmarks]);
 
   useEffect(() => {
     if (!hasCjkTitles(bookmarks)) return;
@@ -155,12 +160,19 @@ export function useBookmarks(
     return () => {
       cancelled = true;
     };
-  }, [bookmarks]);
+  }, [searchableSignature]);
 
-  const fuse = useMemo(() => createBookmarkSearchIndex(bookmarks), [bookmarks, pinyinReady]);
+  // 访问次数变化不影响搜索字段。用稳定签名保留 Fuse 输入，
+  // 避免每次打开结果都重新生成拼音和索引。
+  const searchIndexItems = useMemo(
+    () => bookmarks.map(({ id, title, url, domain }) => ({ id, title, url, domain })),
+    [searchableSignature]
+  );
+  const fuse = useMemo(
+    () => createBookmarkSearchIndex(searchIndexItems),
+    [searchIndexItems, pinyinReady]
+  );
 
-  // 启用来源/时间筛选时，仅在条目或筛选条件变化后重建搜索索引，
-  // 避免每次按键都重复构建。
   const filteredItems = useMemo(
     () =>
       sourceFilter === "all" && timeFilter === "all"
@@ -168,14 +180,10 @@ export function useBookmarks(
         : filterByTime(filterBySource(bookmarks, sourceFilter), timeFilter),
     [bookmarks, sourceFilter, timeFilter]
   );
-  const filteredSearchIndex = useMemo(
-    () => (filteredItems === bookmarks ? fuse : createBookmarkSearchIndex(filteredItems)),
-    [filteredItems, fuse]
-  );
 
   const results = useMemo(
-    () => searchBookmarks(bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredSearchIndex),
-    [bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredSearchIndex]
+    () => searchBookmarks(bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredItems),
+    [bookmarks, query, fuse, sourceFilter, timeFilter, sortMode, filteredItems]
   );
 
   const markVisited = useCallback(async (id: string) => {

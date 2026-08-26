@@ -26,6 +26,7 @@ type BookmarkCacheOptions = {
 export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: BookmarkCacheOptions = {}) {
   let cachedResults: BookmarkResult[] | undefined;
   let isStale = true;
+  let staleVersion = 0;
   let pendingLoad: Promise<BookmarkResult[]> | undefined;
   let pendingRestore: Promise<BookmarkResult[] | undefined> | undefined;
 
@@ -35,7 +36,7 @@ export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: Bookm
     }
     if (!pendingRestore) {
       pendingRestore = options.storage.read().then((results) => {
-        if (results?.length) {
+        if (results !== undefined) {
           cachedResults = results;
         }
         return results;
@@ -46,10 +47,13 @@ export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: Bookm
 
   async function loadAndCache(): Promise<BookmarkResult[]> {
     if (!pendingLoad) {
+      const loadVersion = staleVersion;
       pendingLoad = loadBookmarks()
         .then((results) => {
           cachedResults = results;
-          isStale = false;
+          if (staleVersion === loadVersion) {
+            isStale = false;
+          }
           void options.storage?.write(results).catch(() => {
             // In-memory cache is still valid if persistence fails.
           });
@@ -73,7 +77,7 @@ export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: Bookm
       if (!cachedResults || options.preferFresh) {
         if (!cachedResults && !options.preferFresh) {
           const restoredResults = await restorePersistedCache();
-          if (restoredResults?.length) {
+          if (restoredResults !== undefined) {
             refreshInBackground();
             return { results: restoredResults, cached: true, refreshing: Boolean(pendingLoad) };
           }
@@ -90,6 +94,7 @@ export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: Bookm
       return { results: cachedResults, cached: true, refreshing: Boolean(pendingLoad) };
     },
     markStale(): void {
+      staleVersion += 1;
       isStale = true;
     },
     /**

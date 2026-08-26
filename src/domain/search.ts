@@ -1,8 +1,11 @@
 import Fuse, { type IFuseOptions } from "fuse.js";
 import type { BookmarkItem } from "./types";
 
+/** Fuse 索引只保留搜索字段，访问统计由最新的 BookmarkItem 单独提供。 */
+export type SearchableBookmarkItem = Pick<BookmarkItem, "id" | "title" | "url" | "domain">;
+
 /** Fuse 索引使用的中间类型：额外携带中文标题的全拼字段。 */
-export type IndexableBookmarkItem = BookmarkItem & {
+export type IndexableBookmarkItem = SearchableBookmarkItem & {
   /** 中文标题的全拼（带空格与紧凑两种变体），纯英文标题为空字符串。 */
   __pinyin: string;
 };
@@ -71,9 +74,15 @@ function toSearchPinyin(text: string): string {
   }
 }
 
-export function createBookmarkSearchIndex(items: BookmarkItem[]): Fuse<IndexableBookmarkItem> {
+export function createBookmarkSearchIndex(items: SearchableBookmarkItem[]): Fuse<IndexableBookmarkItem> {
   return new Fuse(
-    items.map((item) => ({ ...item, [PINYIN_KEY]: toSearchPinyin(item.title) })),
+    items.map(({ id, title, url, domain }) => ({
+      id,
+      title,
+      url,
+      domain,
+      [PINYIN_KEY]: toSearchPinyin(title),
+    })),
     fuseOptions
   );
 }
@@ -189,7 +198,7 @@ function getSortFn(sortMode: SortMode, sourceFilter: SourceFilter): (a: Bookmark
     case "recent":
       return withHomeFirst(compareByRecency);
     case "frequent":
-      return withHomeFirst(compareByUsage);
+      return withHomeFirst(compareByVisitCount);
     case "title":
       return withHomeFirst(compareByTitle);
     case "created":
@@ -207,24 +216,24 @@ export function searchBookmarks(
   sourceFilter: SourceFilter = "all",
   timeFilter: TimeFilter = "all",
   sortMode: SortMode = "smart",
-  filteredSearchIndex?: Fuse<IndexableBookmarkItem>
+  filteredItems?: BookmarkItem[]
 ): BookmarkItem[] {
   const textQuery = query.trim();
-  const filtered = filterByTime(filterBySource(items, sourceFilter), timeFilter);
+  const filtered = filteredItems ?? filterByTime(filterBySource(items, sourceFilter), timeFilter);
   const sortFn = getSortFn(sortMode, sourceFilter);
 
   if (!textQuery) {
     return [...filtered].sort(sortFn);
   }
 
-  const needsCustomIndex = sourceFilter !== "all" || timeFilter !== "all";
-  const searchFuse = needsCustomIndex
-    ? (filteredSearchIndex ?? createBookmarkSearchIndex(filtered))
-    : fuse;
+  const currentItemsById = new Map(filtered.map((item) => [item.id, item]));
+  const matches = fuse.search(textQuery).flatMap((result) => {
+    const item = currentItemsById.get(result.item.id);
+    return item ? [{ item, score: result.score }] : [];
+  });
 
-  const matches = searchFuse.search(textQuery);
   if (sortMode === "relevance") {
-    return matches.map((result) => result.item);
+    return matches.map((match) => match.item);
   }
 
   return matches
@@ -235,7 +244,7 @@ export function searchBookmarks(
       }
       return sortFn(a.item, b.item);
     })
-    .map((result) => result.item);
+    .map((match) => match.item);
 }
 
 function compareByRecency(a: BookmarkItem, b: BookmarkItem): number {
@@ -243,6 +252,16 @@ function compareByRecency(a: BookmarkItem, b: BookmarkItem): number {
   const timeB = b.lastVisitedAt ?? b.createdAt ?? 0;
   if (timeB !== timeA) return timeB - timeA;
   return b.visitCount - a.visitCount;
+}
+
+/**
+ * 访问次数最多的排前面（纯"使用频率"），次数相同时回退到最近访问。
+ * 与 smartScore 的差别：不掺入时间衰减，长期不用但访问多的记录
+ * 依然靠前，避免和"智能排序"表现雷同。
+ */
+function compareByVisitCount(a: BookmarkItem, b: BookmarkItem): number {
+  if (b.visitCount !== a.visitCount) return b.visitCount - a.visitCount;
+  return compareByRecency(a, b);
 }
 
 function smartScore(item: BookmarkItem, now: number): number {

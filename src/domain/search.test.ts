@@ -183,6 +183,21 @@ describe("searchBookmarks sort modes", () => {
     expect(result.map((i) => i.id)).toEqual(["b", "c", "a"]);
   });
 
+  test("'frequent' ranks by raw visit count and differs from 'smart'", () => {
+    // fresh：访问少但刚访问过；old：访问多但 30 天未用。
+    // 智能排序看重近期活跃 → fresh 在前；使用频率只看次数 → old 在前。
+    const now = Date.now();
+    const day = 86_400_000;
+    const freqItems: BookmarkItem[] = [
+      { id: "old", title: "Old", url: "https://old.com", domain: "old.com", visitCount: 9, source: "history", lastVisitedAt: now - 30 * day },
+      { id: "fresh", title: "Fresh", url: "https://fresh.com", domain: "fresh.com", visitCount: 1, source: "history", lastVisitedAt: now },
+    ];
+    const freqFuse = createBookmarkSearchIndex(freqItems);
+
+    expect(searchBookmarks(freqItems, "", freqFuse, "all", "all", "smart").map((i) => i.id)).toEqual(["fresh", "old"]);
+    expect(searchBookmarks(freqItems, "", freqFuse, "all", "all", "frequent").map((i) => i.id)).toEqual(["old", "fresh"]);
+  });
+
   test("timeFilter narrows query results to the period", () => {
     const day = 86_400_000;
     // Noon today is always inside the "today" boundary regardless of the
