@@ -4,3 +4,7 @@ dist
 npm-debug.log*
 *.crx
 *.pem
+
+# harness 排序验证页（构建产物，源码在 harness/*.tsx）
+harness/bundle.js
+harness/styles.css
