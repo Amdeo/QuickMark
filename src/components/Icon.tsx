@@ -35,18 +35,17 @@ export type IconName = keyof typeof iconMap;
 
 interface IconProps extends Omit<LucideProps, "ref"> {
   name: IconName;
-  filled?: boolean;
 }
 
-export function Icon({ name, filled, size = 16, className, ...rest }: IconProps) {
+export function Icon({ name, size = 16, className, ...rest }: IconProps) {
   const Component = iconMap[name];
   if (!Component) return null;
   return (
     <Component
       size={size}
       className={className}
-      fill={filled ? "currentColor" : "none"}
-      strokeWidth={filled ? 1.5 : 2}
+      fill="none"
+      strokeWidth={2}
       {...rest}
     />
   );
