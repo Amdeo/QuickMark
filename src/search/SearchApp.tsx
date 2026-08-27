@@ -189,7 +189,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
   const [expandedDomains, setExpandedDomains] = useState<ReadonlySet<string>>(new Set());
   const [copyState, setCopyState] = useState<{ id: string; ok: boolean } | null>(null);
   const copyTimerRef = useRef<number | undefined>(undefined);
-  const { results, isLoading, error, folderPaths, refresh, markVisited } = useBookmarks(query, sourceFilter, timeFilter, sortMode);
+  const { filteredItems, results, isLoading, error, folderPaths, refresh, markVisited } = useBookmarks(query, sourceFilter, timeFilter, sortMode);
 
   // Address-bar semantics: a complete URL or bare domain navigates directly.
   const directUrl = useMemo(() => resolveDirectUrl(query), [query]);
@@ -278,16 +278,21 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
     [results, visibleResultCount]
   );
 
-  const groups = useMemo(() => groupByDomain(loadedResults), [loadedResults]);
+  const groups = useMemo(
+    () => groupByDomain(loadedResults, filteredItems),
+    [loadedResults, filteredItems]
+  );
 
   const renderedGroups = useMemo(() => {
     let flatIndex = 0;
     return groups.map((group) => {
       const isGrouped = group.items.length > 1;
       const isExpanded = expandedDomains.has(group.domain);
+      // 派生首页不占用折叠组的真实记录显示名额。
+      const collapsedCount = DEFAULT_ITEMS_PER_DOMAIN + Number(group.items.length > group.count);
       const items =
         isGrouped && !isExpanded
-          ? group.items.slice(0, DEFAULT_ITEMS_PER_DOMAIN)
+          ? group.items.slice(0, collapsedCount)
           : group.items;
       const entries = items.map((item) => ({ item, flatIndex: flatIndex++ }));
       return {
@@ -763,7 +768,7 @@ export function SearchApp({ mode = "page", onClose, openBookmark = openBookmarkD
                   {isGrouped ? (
                     <GroupHeader
                       domain={group.domain}
-                      count={group.items.length}
+                      count={group.count}
                       isExpanded={isExpanded}
                       onToggle={() => toggleDomain(group.domain)}
                     />

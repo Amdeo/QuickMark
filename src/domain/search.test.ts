@@ -83,18 +83,55 @@ describe("searchBookmarks", () => {
 });
 
 describe("groupByDomain", () => {
-  test("keeps single-domain results in one group in first-occurrence order", () => {
+  test("keeps group order but puts the pathless root URL first within its group", () => {
     const results: BookmarkItem[] = [
-      { id: "h1", title: "Kimi", url: "https://www.kimi.com/", domain: "kimi.com", visitCount: 47, source: "history", lastVisitedAt: 5000 },
-      { id: "h2", title: "Kimi", url: "https://www.kimi.com/settings", domain: "kimi.com", visitCount: 32, source: "history", lastVisitedAt: 4000 },
+      { id: "h1", title: "Kimi 设置", url: "https://www.kimi.com/settings", domain: "kimi.com", visitCount: 47, source: "history", lastVisitedAt: 5000 },
       { id: "b1", title: "React Docs", url: "https://react.dev", domain: "react.dev", visitCount: 5, source: "bookmark" },
-      { id: "h3", title: "Kimi", url: "https://www.kimi.com/membership", domain: "kimi.com", visitCount: 19, source: "history", lastVisitedAt: 3000 },
+      { id: "h2", title: "Kimi", url: "https://www.kimi.com/", domain: "kimi.com", visitCount: 32, source: "history", lastVisitedAt: 4000 },
+      { id: "h3", title: "Kimi 会员", url: "https://www.kimi.com/membership", domain: "kimi.com", visitCount: 19, source: "history", lastVisitedAt: 3000 },
     ];
 
     const groups = groupByDomain(results);
 
     expect(groups.map((g) => g.domain)).toEqual(["kimi.com", "react.dev"]);
-    expect(groups[0].items.map((i) => i.id)).toEqual(["h1", "h2", "h3"]);
+    expect(groups[0].items.map((i) => i.id)).toEqual(["h2", "h1", "h3"]);
+  });
+
+  test("generates a root URL when a group has only paths or query parameters", () => {
+    const results: BookmarkItem[] = [
+      { id: "settings", title: "Kimi 设置", url: "https://www.kimi.com/settings", domain: "kimi.com", favicon: "icon", visitCount: 5, source: "history" },
+      { id: "campaign", title: "Kimi 活动", url: "https://www.kimi.com/?ref=campaign", domain: "kimi.com", visitCount: 3, source: "history" },
+    ];
+
+    const [group] = groupByDomain(results);
+
+    expect(group.items.map((item) => item.url)).toEqual([
+      "https://www.kimi.com/",
+      "https://www.kimi.com/settings",
+      "https://www.kimi.com/?ref=campaign",
+    ]);
+    expect(group.items[0]).toMatchObject({
+      id: "quickmark-generated-home:kimi.com",
+      title: "首页",
+      domain: "kimi.com",
+      favicon: "icon",
+      visitCount: 0,
+    });
+  });
+
+  test("uses a real root URL from the current filter before generating one", () => {
+    const results: BookmarkItem[] = [
+      { id: "settings", title: "Kimi 设置", url: "https://www.kimi.com/settings", domain: "kimi.com", visitCount: 5, source: "history" },
+    ];
+    const referenceItems: BookmarkItem[] = [
+      { id: "home", title: "Kimi", url: "https://www.kimi.com/", domain: "kimi.com", visitCount: 8, source: "bookmark" },
+      ...results,
+    ];
+
+    const [group] = groupByDomain(results, referenceItems);
+
+    expect(group.items.map((item) => item.id)).toEqual(["home", "settings"]);
+    expect(group.count).toBe(1);
   });
 
   test("returns an empty list for no results", () => {
@@ -282,31 +319,14 @@ describe("resolveDirectUrl", () => {
   });
 });
 
-describe("home page priority", () => {
-  test("isHomeUrl detects root paths only", () => {
+describe("root URL detection", () => {
+  test("detects only bare primary domains without params or anchors", () => {
     expect(isHomeUrl("https://example.com")).toBe(true);
     expect(isHomeUrl("https://example.com/")).toBe(true);
-    expect(isHomeUrl("https://example.com/?ref=x")).toBe(true);
+    expect(isHomeUrl("https://example.com/?ref=x")).toBe(false);
+    expect(isHomeUrl("https://example.com/#top")).toBe(false);
     expect(isHomeUrl("https://example.com/docs")).toBe(false);
     expect(isHomeUrl("https://www.example.com/blog")).toBe(false);
     expect(isHomeUrl("not-a-url")).toBe(false);
-  });
-
-  test("home page ranks before sub-pages in every sort mode", () => {
-    // The home entry is worst on every sort key (oldest visit, fewest
-    // visits, earliest creation, later title), yet must still rank first.
-    const items: BookmarkItem[] = [
-      { id: "docs", title: "Docs", url: "https://react.dev/learn", domain: "react.dev", visitCount: 9, source: "bookmark", createdAt: 3000, lastVisitedAt: 3000 },
-      { id: "home", title: "React", url: "https://react.dev", domain: "react.dev", visitCount: 1, source: "bookmark", createdAt: 1000, lastVisitedAt: 1000 },
-      { id: "blog", title: "Blog", url: "https://react.dev/blog", domain: "react.dev", visitCount: 5, source: "bookmark", createdAt: 2000, lastVisitedAt: 2000 },
-    ];
-    const fuse = createBookmarkSearchIndex(items);
-
-    const modes = ["smart", "recent", "frequent", "title", "created", "relevance"] as const;
-    for (const mode of modes) {
-      const result = searchBookmarks(items, "", fuse, "all", "all", mode);
-      expect(result[0]?.id).toBe("home");
-      expect(result[0]?.url).toBe("https://react.dev");
-    }
   });
 });

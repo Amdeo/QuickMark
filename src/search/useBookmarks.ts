@@ -202,5 +202,5 @@ export function useBookmarks(
     }
   }, []);
 
-  return { bookmarks, results, folderPaths, isLoading, error, refresh, markVisited };
+  return { bookmarks, filteredItems, results, folderPaths, isLoading, error, refresh, markVisited };
 }

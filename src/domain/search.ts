@@ -125,14 +125,18 @@ export function filterByTime(items: BookmarkItem[], timeFilter: TimeFilter, now 
 export type ResultGroup = {
   domain: string;
   items: BookmarkItem[];
+  /** 当前结果中的真实记录数；不计额外显示的根地址。 */
+  count: number;
 };
 
 /**
- * Group consecutive search results by domain, preserving the original order
- * of the first occurrence of each domain. Used by the UI to collapse
- * same-site clutter (e.g. multiple history entries from one site).
+ * 按域名分组，保持各组首次出现的顺序；组内将无路径、无参数的根地址
+ * 排到最前。原始记录没有根地址时，基于该组首条链接补一个可打开的首页。
  */
-export function groupByDomain(results: BookmarkItem[]): ResultGroup[] {
+export function groupByDomain(
+  results: BookmarkItem[],
+  referenceItems: BookmarkItem[] = results
+): ResultGroup[] {
   const groups: ResultGroup[] = [];
   const groupIndexByDomain = new Map<string, number>();
 
@@ -140,41 +144,56 @@ export function groupByDomain(results: BookmarkItem[]): ResultGroup[] {
     const existing = groupIndexByDomain.get(item.domain);
     if (existing === undefined) {
       groupIndexByDomain.set(item.domain, groups.length);
-      groups.push({ domain: item.domain, items: [item] });
+      groups.push({ domain: item.domain, items: [item], count: 1 });
     } else {
       groups[existing].items.push(item);
+      groups[existing].count += 1;
     }
   }
 
+  for (const group of groups) {
+    const home =
+      referenceItems.find((item) => item.domain === group.domain && isHomeUrl(item.url)) ??
+      createHomeItem(group.items[0]);
+    if (home) {
+      group.items = [home, ...group.items.filter((item) => item.id !== home.id)];
+    }
+  }
   return groups;
 }
 
 export type SortMode = "smart" | "recent" | "frequent" | "title" | "created" | "relevance";
 
 /**
- * A home page is a URL whose path is empty or just "/" —
- * e.g. https://example.com or https://example.com/?ref=x.
+ * 一级域名（裸首页）：路径为空或 "/"，且不带任何查询参数或锚点，
+ * 如 https://example.com 或 https://example.com/。
+ * 带参数的 https://example.com/?ref=x 不算根地址。
  */
 export function isHomeUrl(url: string): boolean {
   try {
-    const pathname = new URL(url).pathname;
-    return pathname === "" || pathname === "/";
+    const parsed = new URL(url);
+    return (parsed.pathname === "" || parsed.pathname === "/") && parsed.search === "" && parsed.hash === "";
   } catch {
     return false;
   }
 }
 
-/**
- * Wrap a sort function so official home pages of a site always rank
- * before its sub-pages, no matter which sort mode is active.
- */
-function withHomeFirst(sortFn: (a: BookmarkItem, b: BookmarkItem) => number) {
-  return (a: BookmarkItem, b: BookmarkItem): number => {
-    const aHome = isHomeUrl(a.url) ? 1 : 0;
-    const bHome = isHomeUrl(b.url) ? 1 : 0;
-    if (aHome !== bHome) return bHome - aHome;
-    return sortFn(a, b);
-  };
+function createHomeItem(item: BookmarkItem | undefined): BookmarkItem | undefined {
+  if (!item) return undefined;
+  try {
+    const { origin } = new URL(item.url);
+    if (origin === "null") return undefined;
+    return {
+      id: `quickmark-generated-home:${item.domain}`,
+      title: "首页",
+      url: `${origin}/`,
+      domain: item.domain,
+      favicon: item.favicon,
+      visitCount: 0,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 function compareByTitle(a: BookmarkItem, b: BookmarkItem): number {
@@ -188,24 +207,20 @@ function compareByCreated(a: BookmarkItem, b: BookmarkItem): number {
   return b.visitCount - a.visitCount;
 }
 
-/**
- * Tie-breaker / no-query sort function for a sort mode.
- * "smart" and "relevance" both fall back to the existing automatic
- * choice: history by recency, everything else by usage.
- */
+/** 非“相关度优先”搜索的同分回退，以及无查询时的排序函数。 */
 function getSortFn(sortMode: SortMode, sourceFilter: SourceFilter): (a: BookmarkItem, b: BookmarkItem) => number {
   switch (sortMode) {
     case "recent":
-      return withHomeFirst(compareByRecency);
+      return compareByRecency;
     case "frequent":
-      return withHomeFirst(compareByVisitCount);
+      return compareByVisitCount;
     case "title":
-      return withHomeFirst(compareByTitle);
+      return compareByTitle;
     case "created":
-      return withHomeFirst(compareByCreated);
+      return compareByCreated;
     case "smart":
     case "relevance":
-      return withHomeFirst(sourceFilter === "history" ? compareByRecency : compareByUsage);
+      return sourceFilter === "history" ? compareByRecency : compareByUsage;
   }
 }
 
