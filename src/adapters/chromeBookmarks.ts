@@ -1,4 +1,5 @@
 import type { BookmarkItem } from "../domain/types";
+import { isHttpUrl } from "../domain/url";
 import { getExtensionFaviconUrl } from "./favicon";
 
 function extractDomain(url: string): string {
@@ -10,21 +11,7 @@ function extractDomain(url: string): string {
 }
 
 export function isSearchablePageUrl(url: string): boolean {
-  try {
-    const blockedProtocols = new Set([
-      "about:",
-      "chrome:",
-      "chrome-extension:",
-      "devtools:",
-      "edge:",
-      "moz-extension:",
-      "safari-extension:"
-    ]);
-    return !blockedProtocols.has(new URL(url).protocol.toLowerCase());
-  } catch {
-    // 无法解析的 URL 不可注入页面，保守地排除。
-    return false;
-  }
+  return isHttpUrl(url);
 }
 
 function flattenBookmarks(
@@ -54,6 +41,10 @@ function flattenBookmarks(
   }
 
   return results;
+}
+
+function stableHistoryId(url: string): string {
+  return `history:${encodeURIComponent(url)}`;
 }
 
 export async function getNativeBookmarks(): Promise<
@@ -98,12 +89,11 @@ export async function getNativeBookmarks(): Promise<
 
   // Convert non-bookmark history to BookmarkItem format.
   const historyResults: Array<{ item: BookmarkItem; folderPath: string[] }> = [];
-  let historyId = 0;
   for (const [url, data] of historyMap) {
     if (bookmarkUrlSet.has(url)) continue;
     historyResults.push({
       item: {
-        id: `history-${historyId++}`,
+        id: stableHistoryId(url),
         title: data.title,
         url,
         domain: extractDomain(url),

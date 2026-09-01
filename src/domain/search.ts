@@ -1,5 +1,8 @@
 import Fuse, { type IFuseOptions } from "fuse.js";
 import type { BookmarkItem } from "./types";
+import { isHttpUrl } from "./url";
+
+export { isHttpUrl };
 
 /** Fuse 索引只保留搜索字段，访问统计由最新的 BookmarkItem 单独提供。 */
 export type SearchableBookmarkItem = Pick<BookmarkItem, "id" | "title" | "url" | "domain">;
@@ -311,16 +314,18 @@ export function resolveDirectUrl(query: string): string | undefined {
   const trimmed = query.trim();
   if (!trimmed) return undefined;
 
-  if (FULL_URL_PATTERN.test(trimmed)) {
+  if (FULL_URL_PATTERN.test(trimmed) && isHttpUrl(trimmed)) {
     return trimmed;
   }
 
   if (BARE_DOMAIN_PATTERN.test(trimmed)) {
-    return `https://${trimmed}`;
+    const url = `https://${trimmed}`;
+    return isHttpUrl(url) ? url : undefined;
   }
 
   if (LOCALHOST_PATTERN.test(trimmed)) {
-    return `http://${trimmed}`;
+    const url = `http://${trimmed}`;
+    return isHttpUrl(url) ? url : undefined;
   }
 
   return undefined;

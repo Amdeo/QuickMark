@@ -74,3 +74,26 @@ test("getNativeBookmarks filters extension pages from bookmarks and history", as
     globalThis.chrome = originalChrome;
   }
 });
+
+test("uses a stable URL-derived id for history items", async () => {
+  const historyUrl = "https://history.example/docs";
+  const chromeApi = {
+    bookmarks: { getTree: vi.fn().mockResolvedValue([]) },
+    history: {
+      search: vi.fn().mockResolvedValue([
+        { id: "ignored", title: "Docs", url: historyUrl, lastVisitTime: 1000, visitCount: 2 },
+      ]),
+    },
+    runtime: { getURL: (path: string) => `chrome-extension://quickmark${path}` },
+  } as unknown as typeof chrome;
+  const originalChrome = globalThis.chrome;
+  globalThis.chrome = chromeApi;
+  try {
+    const first = await getNativeBookmarks();
+    const second = await getNativeBookmarks();
+    expect(first[0].item.id).toBe(`history:${encodeURIComponent(historyUrl)}`);
+    expect(second[0].item.id).toBe(first[0].item.id);
+  } finally {
+    globalThis.chrome = originalChrome;
+  }
+});

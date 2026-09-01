@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { BookmarkItem } from "../domain/types";
+import { isHttpUrl } from "../domain/search";
 import { SearchApp } from "../search/SearchApp";
 
 // 搜索 UI 大包：由 content/index.tsx（轻量 boot）在用户按下快捷键时
@@ -11,15 +12,15 @@ const STYLE_ID = "quickmark-overlay-style";
 
 let root: Root | undefined;
 
-export function toggleSearchOverlay(): void {
+export async function toggleSearchOverlay(): Promise<void> {
   if (document.getElementById(HOST_ID)) {
     closeOverlay();
     return;
   }
-  openOverlay();
+  await openOverlay();
 }
 
-function openOverlay(): void {
+async function openOverlay(): Promise<void> {
   const host = document.createElement("div");
   host.id = HOST_ID;
   host.style.position = "fixed";
@@ -31,6 +32,7 @@ function openOverlay(): void {
   host.style.padding = "8vh 16px 16px";
   host.style.background = "rgba(0, 0, 0, 0.15)";
   host.style.backdropFilter = "blur(6px)";
+  host.style.visibility = "hidden";
 
   const shadow = host.attachShadow({ mode: "open" });
   const styleLink = document.createElement("link");
@@ -42,12 +44,17 @@ function openOverlay(): void {
   app.style.width = "min(768px, 100%)";
   app.addEventListener("click", (event) => event.stopPropagation());
 
+  const styleReady = new Promise<void>((resolve) => {
+    styleLink.addEventListener("load", () => resolve(), { once: true });
+    styleLink.addEventListener("error", () => resolve(), { once: true });
+  });
   shadow.append(styleLink, app);
   document.documentElement.appendChild(host);
   host.addEventListener("click", closeOverlay);
+  await styleReady;
 
-  // Backdrop fade-in; the panel itself animates via CSS (quickmark-modal-enter).
-  // Both are skipped under prefers-reduced-motion.
+  if (!document.getElementById(HOST_ID)) return;
+
   if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     host.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: "ease-out" });
   }
@@ -58,6 +65,7 @@ function openOverlay(): void {
       <SearchApp mode="modal" onClose={closeOverlay} openBookmark={openBookmarkFromContentScript} />
     </React.StrictMode>
   );
+  host.style.visibility = "visible";
 }
 
 function closeOverlay(): void {
@@ -69,8 +77,10 @@ function closeOverlay(): void {
   root = undefined;
   host?.remove();
 }
-
 async function openBookmarkFromContentScript(item: BookmarkItem, newTab: boolean): Promise<void> {
+  if (!isHttpUrl(item.url)) {
+    return;
+  }
   if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
     await chrome.runtime.sendMessage({ type: "QUICKMARK_OPEN_URL", url: item.url, newTab });
   } else {

@@ -145,6 +145,21 @@ test("QUICKMARK_GET_BOOKMARKS returns error response when loading fails", async 
   expect(sendResponse).toHaveBeenCalledWith({ error: "bookmarks unavailable" });
 });
 
+test("QUICKMARK_OPEN_URL ignores non-http URLs", async () => {
+  const chromeMock = createChromeMock();
+  await importBackground(chromeMock);
+
+  const [messageListener] = [...chromeMock.listeners.runtime];
+  messageListener(
+    { type: "QUICKMARK_OPEN_URL", url: "javascript:alert(1)", newTab: true },
+    { id: "test-extension", tab: { id: 42 } },
+    vi.fn()
+  );
+
+  expect(chromeMock.api.tabs.create).not.toHaveBeenCalled();
+  expect(chromeMock.api.tabs.update).not.toHaveBeenCalled();
+});
+
 test("QUICKMARK_OPEN_URL opens in the sending tab when newTab is false", async () => {
   const chromeMock = createChromeMock();
   await importBackground(chromeMock);

@@ -4,7 +4,7 @@ import { Icon } from "../components/Icon";
 import { getExtensionFaviconUrl } from "../adapters/favicon";
 import { useBookmarks } from "./useBookmarks";
 import { getDisplayFolderPath, getNextVisibleResultCount, getScrollTarget, isNearScrollBottom, splitQueryMatch, formatRelativeTime, compactUrl } from "./display";
-import { groupByDomain, resolveDirectUrl, type SortMode, type SourceFilter, type TimeFilter } from "../domain/search";
+import { groupByDomain, isHttpUrl, resolveDirectUrl, type SortMode, type SourceFilter, type TimeFilter } from "../domain/search";
 
 const HISTORY_KEY = "quickmark-search-history";
 const THEME_KEY = "quickmark-theme";
@@ -1200,6 +1200,9 @@ function EmptyState({
 }
 
 async function openBookmarkDefault(item: BookmarkItem, newTab: boolean): Promise<void> {
+  if (!isHttpUrl(item.url)) {
+    return;
+  }
   if (typeof chrome === "undefined" || !chrome.tabs) {
     window.open(item.url, "_blank");
     return;

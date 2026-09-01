@@ -127,6 +127,51 @@ test("bookmark cache keeps an invalidation raised during a refresh", async () =>
   resolveRetry(retryResults);
 });
 
+test("bookmark cache does not commit results loaded before invalidation", async () => {
+  const initial = [{ item: bookmark, folderPath: [] }];
+  const stale = [{ item: updatedBookmark, folderPath: [] }];
+  const fresh = [{ item: { ...updatedBookmark, title: "Fresh" }, folderPath: [] }];
+  let resolveFirstRefresh!: (results: typeof stale) => void;
+  let resolveRetryRefresh!: (results: typeof fresh) => void;
+  const firstRefresh = new Promise<typeof stale>((resolve) => {
+    resolveFirstRefresh = resolve;
+  });
+  const retryRefresh = new Promise<typeof fresh>((resolve) => {
+    resolveRetryRefresh = resolve;
+  });
+  const loadBookmarks = vi
+    .fn()
+    .mockResolvedValueOnce(initial)
+    .mockReturnValueOnce(firstRefresh)
+    .mockReturnValueOnce(retryRefresh);
+  const storage = {
+    read: vi.fn().mockResolvedValue(undefined),
+    write: vi.fn().mockResolvedValue(undefined),
+  };
+  const cache = createBookmarkCache(loadBookmarks, { storage });
+
+  await cache.getBookmarks();
+  storage.write.mockClear();
+  cache.markStale();
+  const staleResponse = cache.getBookmarks();
+  cache.markStale();
+  resolveFirstRefresh(stale);
+  await staleResponse;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  const duringRetry = await cache.getBookmarks();
+  expect(duringRetry.results).toEqual(initial);
+  expect(duringRetry.cached).toBe(true);
+  expect(duringRetry.refreshing).toBe(true);
+  expect(loadBookmarks).toHaveBeenCalledTimes(3);
+  expect(storage.write).not.toHaveBeenCalled();
+
+  resolveRetryRefresh(fresh);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const afterRetry = await cache.getBookmarks();
+  expect(afterRetry.results).toEqual(fresh);
+  expect(storage.write).toHaveBeenCalledTimes(1);
+});
 test("markVisited bumps usage stats and persists them through storage", async () => {
   const loadBookmarks = vi.fn().mockResolvedValue([{ item: bookmark, folderPath: [] }]);
   const storage = {

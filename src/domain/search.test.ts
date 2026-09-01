@@ -298,6 +298,12 @@ describe("resolveDirectUrl", () => {
     expect(resolveDirectUrl("http://localhost:3000")).toBe("http://localhost:3000");
   });
 
+  test("rejects invalid ports and non-web protocols", () => {
+    expect(resolveDirectUrl("https://example.com:99999")).toBeUndefined();
+    expect(resolveDirectUrl("javascript:alert(1)")).toBeUndefined();
+    expect(resolveDirectUrl("file:///tmp/example")).toBeUndefined();
+  });
+
   test("handles localhost with a port", () => {
     expect(resolveDirectUrl("localhost:8080")).toBe("http://localhost:8080");
   });

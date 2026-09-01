@@ -9,7 +9,7 @@ const HOST_ID = "quickmark-overlay-root";
 const SKELETON_HOST_ID = "quickmark-skeleton-root";
 
 type SearchModule = {
-  toggleSearchOverlay: () => void;
+  toggleSearchOverlay: () => Promise<void>;
 };
 
 let searchModulePromise: Promise<SearchModule> | undefined;
@@ -39,8 +39,16 @@ async function handleToggle(): Promise<void> {
     if (!document.getElementById(SKELETON_HOST_ID)) {
       return;
     }
-    hideSkeleton();
-    module.toggleSearchOverlay();
+    await module.toggleSearchOverlay();
+    // 动态模块会等待 Shadow DOM 样式表加载完成后才挂载 React，避免无样式闪现。
+    if (document.getElementById(SKELETON_HOST_ID)) {
+      hideSkeleton();
+    } else {
+      // 用户在等待期间关闭了骨架，同时关闭已经就绪的真实面板。
+      if (document.getElementById(HOST_ID)) {
+        await module.toggleSearchOverlay();
+      }
+    }
   } catch {
     hideSkeleton();
   }

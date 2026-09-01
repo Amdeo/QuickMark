@@ -1,4 +1,5 @@
 import { getNativeBookmarks, isSearchablePageUrl } from "../adapters/chromeBookmarks";
+import { isHttpUrl } from "../domain/search";
 import { createBookmarkCache, type BookmarkResult } from "./bookmarkCache";
 import { BOOKMARK_CACHE_KEY } from "./cacheKeys";
 
@@ -44,6 +45,9 @@ chrome.runtime.onMessage.addListener((
   }
 
   if (message.type === "QUICKMARK_OPEN_URL" && message.url) {
+    if (!isHttpUrl(message.url)) {
+      return;
+    }
     if (!message.newTab && sender.tab?.id != null) {
       void chrome.tabs.update(sender.tab.id, { url: message.url });
     } else {

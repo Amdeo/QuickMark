@@ -47,21 +47,25 @@ export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: Bookm
 
   async function loadAndCache(): Promise<BookmarkResult[]> {
     if (!pendingLoad) {
-      const loadVersion = staleVersion;
-      pendingLoad = loadBookmarks()
-        .then((results) => {
-          cachedResults = results;
-          if (staleVersion === loadVersion) {
-            isStale = false;
+      pendingLoad = (async () => {
+        while (true) {
+          const loadVersion = staleVersion;
+          const results = await loadBookmarks();
+          if (staleVersion !== loadVersion) {
+            // 加载期间发生失效，丢弃这批结果并立即重试，避免
+            // preferFresh 调用拿到过期数据，也避免旧结果覆盖缓存。
+            continue;
           }
+          cachedResults = results;
+          isStale = false;
           void options.storage?.write(results).catch(() => {
             // In-memory cache is still valid if persistence fails.
           });
           return results;
-        })
-        .finally(() => {
-          pendingLoad = undefined;
-        });
+        }
+      })().finally(() => {
+        pendingLoad = undefined;
+      });
     }
     return pendingLoad;
   }
