@@ -7,19 +7,42 @@
 // 用于判断大包是否已挂载。
 const HOST_ID = "quickmark-overlay-root";
 const SKELETON_HOST_ID = "quickmark-skeleton-root";
+const TABS_HOST_ID = "quickmark-tabs-root";
 
 type SearchModule = {
   toggleSearchOverlay: () => Promise<void>;
 };
 
+type TabsModule = {
+  toggleTabsOverlay: () => Promise<void>;
+};
+
 let searchModulePromise: Promise<SearchModule> | undefined;
+let tabsModulePromise: Promise<TabsModule> | undefined;
 
 chrome.runtime.onMessage.addListener((message: { type?: string }, sender: chrome.runtime.MessageSender) => {
   if (sender.id !== chrome.runtime.id) return;
   if (message.type === "QUICKMARK_TOGGLE") {
     void handleToggle();
+  } else if (message.type === "QUICKMARK_TOGGLE_TABS") {
+    void handleTabsToggle();
   }
 });
+
+async function handleTabsToggle(): Promise<void> {
+  if (document.getElementById(TABS_HOST_ID)) {
+    const module = await loadTabsModule();
+    await module.toggleTabsOverlay();
+    return;
+  }
+  hideSkeleton();
+  if (document.getElementById(HOST_ID)) {
+    const search = await loadSearchModule();
+    await search.toggleSearchOverlay();
+  }
+  const module = await loadTabsModule();
+  await module.toggleTabsOverlay();
+}
 
 async function handleToggle(): Promise<void> {
   // 大包已挂载：交大包处理开关切换（重复按键关闭面板）。
@@ -65,6 +88,18 @@ function loadSearchModule(): Promise<SearchModule> {
       });
   }
   return searchModulePromise;
+}
+
+function loadTabsModule(): Promise<TabsModule> {
+  if (!tabsModulePromise) {
+    tabsModulePromise = import(chrome.runtime.getURL("assets/content-tabs.js"))
+      .then((module) => module as TabsModule)
+      .catch((error) => {
+        tabsModulePromise = undefined;
+        throw error;
+      });
+  }
+  return tabsModulePromise;
 }
 
 // 骨架面板样式与 DESIGN.md 的模态容器保持一致：

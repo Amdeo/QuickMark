@@ -9,12 +9,3 @@ export type BookmarkItem = {
   visitCount: number;
   source?: "bookmark" | "history";
 };
-
-export type HistoryItem = {
-  id: string;
-  url: string;
-  title: string;
-  lastVisitTime: number;
-  visitCount: number;
-  typedCount?: number;
-};

@@ -266,3 +266,34 @@ test("SearchApp shows the compact URL for duplicate titles inside a domain group
   expect(html).toContain(">Kimi<");
   expect(html).toContain(">Kimi Chat<");
 });
+
+test("SearchApp clips modal children to preserve the bottom corner radius", async () => {
+  const bookmark: BookmarkItem = {
+    id: "bookmark-1",
+    title: "Example Docs",
+    url: "https://example.com/docs",
+    domain: "example.com",
+    favicon: "",
+    visitCount: 1,
+    source: "bookmark",
+  };
+
+  vi.stubGlobal("navigator", { platform: "MacIntel" });
+  vi.doMock("./useBookmarks", () => ({
+    useBookmarks: () => ({
+      results: [bookmark],
+      isLoading: false,
+      error: undefined,
+      folderPaths: new Map(),
+      refresh: vi.fn(),
+      markVisited: vi.fn(),
+    }),
+  }));
+
+  const { SearchApp } = await import("./SearchApp");
+  const html = renderToStaticMarkup(<SearchApp mode="modal" />);
+
+  expect(html).toContain(
+    "max-h-[min(640px,calc(100vh-64px))] rounded-3xl border border-outline-variant/50 shadow-dialog overflow-hidden"
+  );
+});

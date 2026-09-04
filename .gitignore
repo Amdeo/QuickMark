@@ -8,3 +8,6 @@ npm-debug.log*
 # harness 排序验证页（构建产物，源码在 harness/*.tsx）
 harness/bundle.js
 harness/styles.css
+
+# 外部编码代理生成的工作记录
+.zcode/

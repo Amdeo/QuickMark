@@ -67,6 +67,11 @@ function createChromeMock() {
         sendMessage: vi.fn().mockResolvedValue(undefined),
         create: vi.fn().mockResolvedValue(undefined),
         update: vi.fn().mockResolvedValue(undefined),
+        remove: vi.fn().mockResolvedValue(undefined),
+        TAB_ID_NONE: -1,
+      },
+      windows: {
+        update: vi.fn().mockResolvedValue(undefined),
       },
       scripting: {
         executeScript: vi.fn().mockResolvedValue(undefined),
@@ -298,4 +303,54 @@ test("bookmark and history events mark cache stale", async () => {
 
   expect(getNativeBookmarks).toHaveBeenCalledTimes(2);
   expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ cached: true, refreshing: true }));
+});
+
+test("open-tabs command forwards the toggle message", async () => {
+  const chromeMock = createChromeMock();
+  chromeMock.api.tabs.query.mockResolvedValue([{ id: 1, url: "https://example.com" }]);
+  await importBackground(chromeMock);
+
+  const [commandListener] = [...chromeMock.listeners.commands];
+  commandListener("open-tabs");
+
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(chromeMock.api.tabs.sendMessage).toHaveBeenCalledWith(1, { type: "QUICKMARK_TOGGLE_TABS" });
+});
+
+test("tab messages list tabs and activate a selected tab", async () => {
+  const chromeMock = createChromeMock();
+  chromeMock.api.tabs.query.mockResolvedValue([
+    { id: 1, windowId: 10, index: 0, title: "Example", url: "https://example.com" },
+    { id: -1, windowId: 10, index: 1, title: "Discarded", url: "chrome://newtab" },
+  ]);
+  await importBackground(chromeMock);
+
+  const [messageListener] = [...chromeMock.listeners.runtime];
+  const sendResponse = vi.fn();
+  expect(messageListener({ type: "QUICKMARK_LIST_TABS" }, { id: "test-extension" }, sendResponse)).toBe(true);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(sendResponse).toHaveBeenCalledWith({
+    tabs: [{ id: 1, windowId: 10, index: 0, title: "Example", url: "https://example.com" }],
+    activeId: undefined,
+  });
+
+  messageListener(
+    { type: "QUICKMARK_ACTIVATE_TAB", tabId: 1, windowId: 10 },
+    { id: "test-extension" },
+    sendResponse,
+  );
+  expect(chromeMock.api.tabs.update).toHaveBeenCalledWith(1, { active: true });
+  expect(chromeMock.api.windows.update).toHaveBeenCalledWith(10, { focused: true });
+});
+
+test("tab messages close a selected tab", async () => {
+  const chromeMock = createChromeMock();
+  await importBackground(chromeMock);
+
+  const [messageListener] = [...chromeMock.listeners.runtime];
+  const sendResponse = vi.fn();
+  expect(messageListener({ type: "QUICKMARK_CLOSE_TAB", tabId: 42 }, { id: "test-extension" }, sendResponse)).toBe(true);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(chromeMock.api.tabs.remove).toHaveBeenCalledWith(42);
+  expect(sendResponse).toHaveBeenCalledWith({ ok: true });
 });
