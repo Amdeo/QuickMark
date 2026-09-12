@@ -130,4 +130,50 @@ describe("tabs overlay", () => {
     expect(titles()).toEqual(["Stack Overflow"]);
     expect(input().getAttribute("aria-activedescendant")).toBe("qt-option-0");
   });
+
+  test("page-level shortcut handlers never see keystrokes typed in the overlay", () => {
+    const pageHandler = vi.fn();
+    document.addEventListener("keydown", pageHandler);
+    try {
+      // 真实键盘事件是 composed 的，缺少它 jsdom 不会让事件走到宿主之外。
+      const typed = new KeyboardEvent("keydown", { key: "s", bubbles: true, composed: true, cancelable: true });
+      input().dispatchEvent(typed);
+      expect(pageHandler).not.toHaveBeenCalled();
+      // 面板内部照旧处理按键：Esc 仍然生效。
+      press("Escape", input());
+      expect(document.getElementById(HOST_ID)).toBeNull();
+    } finally {
+      document.removeEventListener("keydown", pageHandler);
+    }
+  });
+});
+
+test("a previous overlay's pending tab list cannot replace a reopened overlay", async () => {
+  await toggleTabsOverlay();
+  const pending: Array<(response: unknown) => void> = [];
+  const originalSend = chrome.runtime.sendMessage;
+  const pendingSend = vi.fn((_message, callback) => { pending.push(callback); });
+  // The overlay uses Chrome's callback overload, not its Promise overloads.
+  chrome.runtime.sendMessage = pendingSend as unknown as typeof chrome.runtime.sendMessage;
+  try {
+    await toggleTabsOverlay();
+    await toggleTabsOverlay();
+    await toggleTabsOverlay();
+    pending[1]({ tabs: [{ ...TABS[0], title: "Fresh tab" }], activeId: 1 });
+    await Promise.resolve();
+    expect(titles()).toEqual(["Fresh tab"]);
+    pending[0]({ tabs: TABS, activeId: 2 });
+    await Promise.resolve();
+    expect(titles()).toEqual(["Fresh tab"]);
+  } finally {
+    chrome.runtime.sendMessage = originalSend;
+  }
+});
+
+test("Enter on a focused close button never activates another tab", () => {
+  const closeButton = shadow().querySelector<HTMLButtonElement>(".qt-close")!;
+  closeButton.focus();
+  press("Enter", closeButton);
+  expect(sentMessages).not.toContain("QUICKMARK_ACTIVATE_TAB");
+  expect(document.getElementById(HOST_ID)).not.toBeNull();
 });

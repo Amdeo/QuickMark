@@ -55,13 +55,16 @@ chrome.runtime.onMessage.addListener((
 
   if (message.type === "QUICKMARK_OPEN_URL" && message.url) {
     if (!isHttpUrl(message.url)) {
+      sendResponse({ ok: false, error: "仅支持 HTTP/HTTPS 网址。" });
       return;
     }
-    if (!message.newTab && sender.tab?.id != null) {
-      void chrome.tabs.update(sender.tab.id, { url: message.url });
-    } else {
-      void chrome.tabs.create({ url: message.url, active: true });
-    }
+    const navigation = !message.newTab && sender.tab?.id != null
+      ? chrome.tabs.update(sender.tab.id, { url: message.url })
+      : chrome.tabs.create({ url: message.url, active: true });
+    navigation.then(() => sendResponse({ ok: true })).catch((error: unknown) => {
+      sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) });
+    });
+    return true;
   }
 
   if (message.type === "QUICKMARK_TRIGGER_SEARCH") {

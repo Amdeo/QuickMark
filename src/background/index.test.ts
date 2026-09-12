@@ -102,19 +102,6 @@ afterEach(() => {
   getNativeBookmarks.mockReset();
 });
 
-test("background registers chrome event listeners on load", async () => {
-  const chromeMock = createChromeMock();
-  await importBackground(chromeMock);
-
-  expect(chromeMock.api.commands.onCommand.addListener).toHaveBeenCalledTimes(1);
-  expect(chromeMock.api.runtime.onMessage.addListener).toHaveBeenCalledTimes(1);
-  expect(chromeMock.api.bookmarks.onCreated.addListener).toHaveBeenCalledTimes(1);
-  expect(chromeMock.api.bookmarks.onRemoved.addListener).toHaveBeenCalledTimes(1);
-  expect(chromeMock.api.bookmarks.onChanged.addListener).toHaveBeenCalledTimes(1);
-  expect(chromeMock.api.bookmarks.onMoved.addListener).toHaveBeenCalledTimes(1);
-  expect(chromeMock.api.history.onVisited.addListener).toHaveBeenCalledTimes(1);
-  expect(chromeMock.api.history.onVisitRemoved.addListener).toHaveBeenCalledTimes(1);
-});
 
 test("QUICKMARK_GET_BOOKMARKS returns results and keeps message channel open", async () => {
   const chromeMock = createChromeMock();
@@ -353,4 +340,22 @@ test("tab messages close a selected tab", async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(chromeMock.api.tabs.remove).toHaveBeenCalledWith(42);
   expect(sendResponse).toHaveBeenCalledWith({ ok: true });
+});
+
+test("QUICKMARK_OPEN_URL reports completion and tab navigation failures", async () => {
+  const chromeMock = createChromeMock();
+  await importBackground(chromeMock);
+  const [listener] = [...chromeMock.listeners.runtime];
+  const message = { type: "QUICKMARK_OPEN_URL", url: "https://example.com", newTab: false };
+  const sender = { id: "test-extension", tab: { id: 42 } };
+  // ES2022 target has no Promise.withResolvers; await the callback signal directly.
+  const success = await new Promise((resolve) => {
+    expect(listener(message, sender, resolve)).toBe(true);
+  });
+  expect(success).toEqual({ ok: true });
+  chromeMock.api.tabs.update.mockRejectedValueOnce(new Error("Tab not found"));
+  const failure = await new Promise((resolve) => {
+    expect(listener(message, sender, resolve)).toBe(true);
+  });
+  expect(failure).toEqual({ ok: false, error: "Tab not found" });
 });

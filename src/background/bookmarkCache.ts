@@ -36,10 +36,13 @@ export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: Bookm
     }
     if (!pendingRestore) {
       pendingRestore = options.storage.read().then((results) => {
-        if (results !== undefined) {
+        if (cachedResults === undefined && results !== undefined) {
           cachedResults = results;
         }
-        return results;
+        return cachedResults;
+      }).catch(() => {
+        pendingRestore = undefined;
+        return undefined;
       });
     }
     return pendingRestore;
@@ -82,7 +85,7 @@ export function createBookmarkCache(loadBookmarks: LoadBookmarks, options: Bookm
         if (!cachedResults && !options.preferFresh) {
           const restoredResults = await restorePersistedCache();
           if (restoredResults !== undefined) {
-            refreshInBackground();
+            if (isStale) refreshInBackground();
             return { results: restoredResults, cached: true, refreshing: Boolean(pendingLoad) };
           }
         }

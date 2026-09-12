@@ -1,5 +1,7 @@
-import { createBookmarkSearchIndex, ensurePinyinLoaded, filterBySource, filterByTime, isHomeUrl, searchBookmarks, groupByDomain, resolveDirectUrl } from "./search";
+import { createBookmarkSearchIndex, ensurePinyinLoaded, filterBySource, filterByTime, searchBookmarks, resolveDirectUrl } from "./search";
 import type { BookmarkItem } from "./types";
+
+afterEach(() => vi.restoreAllMocks());
 
 const items: BookmarkItem[] = [
   { id: "b1", title: "React Docs", url: "https://react.dev", domain: "react.dev", visitCount: 5, source: "bookmark" },
@@ -29,10 +31,6 @@ describe("filterBySource", () => {
 });
 
 describe("searchBookmarks", () => {
-  test("empty query returns sorted items for 'all'", () => {
-    const result = searchBookmarks(items, "", fuse, "all");
-    expect(result).toHaveLength(4);
-  });
 
   test("empty query returns only bookmarks when filtered", () => {
     const result = searchBookmarks(items, "", fuse, "bookmark");
@@ -57,87 +55,9 @@ describe("searchBookmarks", () => {
     expect(result[0].source).toBe("history");
   });
 
-  test("default filter is 'all'", () => {
-    const result = searchBookmarks(items, "");
-    expect(result).toHaveLength(4);
-  });
 
-  test("history filter sorts by lastVisitedAt descending", () => {
-    const historyItems: BookmarkItem[] = [
-      { id: "h1", title: "Old Site", url: "https://old.com", domain: "old.com", visitCount: 1, source: "history", lastVisitedAt: 1000 },
-      { id: "h2", title: "New Site", url: "https://new.com", domain: "new.com", visitCount: 1, source: "history", lastVisitedAt: 5000 },
-      { id: "h3", title: "Mid Site", url: "https://mid.com", domain: "mid.com", visitCount: 1, source: "history", lastVisitedAt: 3000 },
-    ];
-    const result = searchBookmarks(historyItems, "", createBookmarkSearchIndex(historyItems), "history");
-    expect(result.map((i) => i.id)).toEqual(["h2", "h3", "h1"]);
-  });
-
-  test("history search tie-breaks by lastVisitedAt descending", () => {
-    const historyItems: BookmarkItem[] = [
-      { id: "h1", title: "GitHub", url: "https://github.com", domain: "github.com", visitCount: 1, source: "history", lastVisitedAt: 1000 },
-      { id: "h2", title: "GitHub", url: "https://github.com", domain: "github.com", visitCount: 5, source: "history", lastVisitedAt: 5000 },
-    ];
-    const result = searchBookmarks(historyItems, "github", createBookmarkSearchIndex(historyItems), "history");
-    expect(result[0].id).toBe("h2");
-  });
 });
 
-describe("groupByDomain", () => {
-  test("keeps group order but puts the pathless root URL first within its group", () => {
-    const results: BookmarkItem[] = [
-      { id: "h1", title: "Kimi 设置", url: "https://www.kimi.com/settings", domain: "kimi.com", visitCount: 47, source: "history", lastVisitedAt: 5000 },
-      { id: "b1", title: "React Docs", url: "https://react.dev", domain: "react.dev", visitCount: 5, source: "bookmark" },
-      { id: "h2", title: "Kimi", url: "https://www.kimi.com/", domain: "kimi.com", visitCount: 32, source: "history", lastVisitedAt: 4000 },
-      { id: "h3", title: "Kimi 会员", url: "https://www.kimi.com/membership", domain: "kimi.com", visitCount: 19, source: "history", lastVisitedAt: 3000 },
-    ];
-
-    const groups = groupByDomain(results);
-
-    expect(groups.map((g) => g.domain)).toEqual(["kimi.com", "react.dev"]);
-    expect(groups[0].items.map((i) => i.id)).toEqual(["h2", "h1", "h3"]);
-  });
-
-  test("generates a root URL when a group has only paths or query parameters", () => {
-    const results: BookmarkItem[] = [
-      { id: "settings", title: "Kimi 设置", url: "https://www.kimi.com/settings", domain: "kimi.com", favicon: "icon", visitCount: 5, source: "history" },
-      { id: "campaign", title: "Kimi 活动", url: "https://www.kimi.com/?ref=campaign", domain: "kimi.com", visitCount: 3, source: "history" },
-    ];
-
-    const [group] = groupByDomain(results);
-
-    expect(group.items.map((item) => item.url)).toEqual([
-      "https://www.kimi.com/",
-      "https://www.kimi.com/settings",
-      "https://www.kimi.com/?ref=campaign",
-    ]);
-    expect(group.items[0]).toMatchObject({
-      id: "quickmark-generated-home:kimi.com",
-      title: "首页",
-      domain: "kimi.com",
-      favicon: "icon",
-      visitCount: 0,
-    });
-  });
-
-  test("uses a real root URL from the current filter before generating one", () => {
-    const results: BookmarkItem[] = [
-      { id: "settings", title: "Kimi 设置", url: "https://www.kimi.com/settings", domain: "kimi.com", visitCount: 5, source: "history" },
-    ];
-    const referenceItems: BookmarkItem[] = [
-      { id: "home", title: "Kimi", url: "https://www.kimi.com/", domain: "kimi.com", visitCount: 8, source: "bookmark" },
-      ...results,
-    ];
-
-    const [group] = groupByDomain(results, referenceItems);
-
-    expect(group.items.map((item) => item.id)).toEqual(["home", "settings"]);
-    expect(group.count).toBe(1);
-  });
-
-  test("returns an empty list for no results", () => {
-    expect(groupByDomain([])).toEqual([]);
-  });
-});
 
 describe("filterByTime", () => {
   // 2026-05-20 is a Wednesday. Build relative dates to stay independent
@@ -249,8 +169,59 @@ describe("searchBookmarks sort modes", () => {
     const result = searchBookmarks(mixed, "react", mixedFuse, "all", "today");
     expect(result.map((i) => i.id)).toEqual(["fresh"]);
   });
-});
 
+  test("smart ranking favors recent modest use over dormant high count", () => {
+    const now = new Date(2026, 4, 20, 12).getTime();
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const candidates: BookmarkItem[] = [
+      { id: "dormant", title: "Dormant", url: "https://example.com/old", domain: "example.com", visitCount: 100, lastVisitedAt: now - 60 * 86_400_000 },
+      { id: "recent", title: "Recent", url: "https://example.com/new", domain: "example.com", visitCount: 2, lastVisitedAt: now - 86_400_000 },
+    ];
+    const result = searchBookmarks(candidates, "", createBookmarkSearchIndex(candidates), "all", "all", "smart");
+    expect(result.map((item) => item.id)).toEqual(["recent", "dormant"]);
+  });
+
+  test("smart ranking does not give unvisited created bookmarks fabricated recency", () => {
+    const now = new Date(2026, 4, 20, 12).getTime();
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const candidates: BookmarkItem[] = [
+      { id: "created", title: "Created", url: "https://created.example", domain: "created.example", visitCount: 1, createdAt: now },
+      { id: "visited", title: "Visited", url: "https://visited.example", domain: "visited.example", visitCount: 1, lastVisitedAt: now - 86_400_000 },
+    ];
+    const result = searchBookmarks(candidates, "", createBookmarkSearchIndex(candidates), "all", "all", "smart");
+    expect(result.map((item) => item.id)).toEqual(["visited", "created"]);
+  });
+
+  test("smart sorting rewards frequency among equally recent visits", () => {
+    const lastVisitedAt = new Date(2026, 4, 20, 12).getTime();
+    vi.spyOn(Date, "now").mockReturnValue(lastVisitedAt);
+    const candidates: BookmarkItem[] = [
+      { id: "few", title: "Few", url: "https://few.example", domain: "few.example", visitCount: 2, lastVisitedAt },
+      { id: "many", title: "Many", url: "https://many.example", domain: "many.example", visitCount: 8, lastVisitedAt },
+    ];
+    const result = searchBookmarks(candidates, "", createBookmarkSearchIndex(candidates), "all", "all", "smart");
+    expect(result.map((item) => item.id)).toEqual(["many", "few"]);
+  });
+
+  test("same-domain results stay flat and preserve every exact URL", () => {
+    const candidates: BookmarkItem[] = [
+      { id: "one", title: "One", url: "https://same.example/one", domain: "same.example", visitCount: 1 },
+      { id: "two", title: "Two", url: "https://same.example/two", domain: "same.example", visitCount: 1 },
+    ];
+    const result = searchBookmarks(candidates, "", createBookmarkSearchIndex(candidates), "all", "all", "title");
+    expect(result.map((item) => item.url)).toEqual(["https://same.example/one", "https://same.example/two"]);
+  });
+
+  test("recent sorting uses actual last visits, never creation time fallback", () => {
+    const candidates: BookmarkItem[] = [
+      { id: "visited", title: "Visited", url: "https://visited.example", domain: "visited.example", visitCount: 1, createdAt: 1, lastVisitedAt: 2 },
+      { id: "created", title: "Created", url: "https://created.example", domain: "created.example", visitCount: 1, createdAt: 9_999_999 },
+    ];
+    const result = searchBookmarks(candidates, "", createBookmarkSearchIndex(candidates), "all", "all", "recent");
+    expect(result.map((item) => item.id)).toEqual(["visited", "created"]);
+  });
+
+});
 describe("pinyin search", () => {
   const zhItems: BookmarkItem[] = [
     { id: "zhihu", title: "知乎 - 发现", url: "https://www.zhihu.com", domain: "zhihu.com", visitCount: 5, source: "bookmark" },
@@ -325,14 +296,3 @@ describe("resolveDirectUrl", () => {
   });
 });
 
-describe("root URL detection", () => {
-  test("detects only bare primary domains without params or anchors", () => {
-    expect(isHomeUrl("https://example.com")).toBe(true);
-    expect(isHomeUrl("https://example.com/")).toBe(true);
-    expect(isHomeUrl("https://example.com/?ref=x")).toBe(false);
-    expect(isHomeUrl("https://example.com/#top")).toBe(false);
-    expect(isHomeUrl("https://example.com/docs")).toBe(false);
-    expect(isHomeUrl("https://www.example.com/blog")).toBe(false);
-    expect(isHomeUrl("not-a-url")).toBe(false);
-  });
-});

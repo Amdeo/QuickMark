@@ -349,7 +349,7 @@ The surface system follows MD3 semantics. In light mode, surfaces ascend from wh
 
 - **Modal**: `max-w-3xl` (768px), fixed height `600px`, centered horizontally, `8vh` from top.
 - **Popup page**: `min-h-screen`, `bg-canvas`, content centered with `max-w-3xl`.
-- **Content script host**: `position: fixed; inset: 0; z-index: 2147483647`, with `backdrop-filter: blur(6px)` and `background: rgba(0,0,0,0.15)`.
+- **Content script host**: `position: fixed; inset: 0; z-index: 2147483647`, with `backdrop-filter: blur(6px)` and `background: rgba(0,0,0,0.15)`. Key events (`keydown` / `keypress` / `keyup`) are stopped at the host, so page-level shortcuts (GitHub's `s`, `/`, `?`) neither fire nor `preventDefault` while the panel is open — Shadow DOM retargeting otherwise hides from the page that the user is typing. Panel-internal handling runs before the host; page listeners registered in the capture phase still fire first and cannot be intercepted from inside the page.
 
 ### Whitespace Philosophy
 
@@ -409,6 +409,28 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 
 ## Components
 
+### Pinned Websites and Ranking
+
+- Search results are independent rows in ranked order. Never collapse by domain, promote a site's root URL, or synthesize homepage results.
+- An empty query adds the pinned strip to the filter bar itself, right of the source chips and left of the filter dropdown, outside the scroll area: at most eight exact URLs as a strip of 28px favicon buttons (15px icons, 6px gaps) prefixed by a pin glyph that names the strip. The filter row wraps, so a narrow panel moves the whole strip to its own line instead of clipping it. Each icon carries the same corner number badge as result rows, showing its real `Cmd/Ctrl+N` key. Drag an icon onto another to reorder — the strip is the manual order, so the drop target's new position is persisted, and numbers plus digit keys follow the new order.
+- One dropdown in the filter bar owns both the time range and the sort mode, split into labelled groups inside a single menu; source filtering stays as chips beside it. Its label summarizes the active non-default choices (e.g. `今天 · 使用频率`) and reads `筛选` when both are at their defaults, so removing the time chips never hides the current filter state.
+- Pin/unpin from a result with its pin button or `Alt+P`. `Cmd/Ctrl+1–8` opens pins while the strip is visible; result rows then continue the numbering, and badges always render the row's real key (`shortcutKey`) rather than a position, so the badge can never promise a key that opens something else. With a query typed the strip is hidden and digits map to results again. Unpin is a small remove button revealed on hover or keyboard focus; with nothing pinned the bar renders no placeholder.
+- Smart ranking uses actual visits, with recency (up to 100 points, 3-day exponential decay) plus bounded log-scaled frequency (up to 40 points, 14-day exponential decay). Missing visit timestamps receive no recency or frequency boost. New bookmark creation is not evidence of a visit.
+- Without a query, recent orders by actual visit time; frequent orders by visit count. With a query, textual relevance remains primary, the selected mode breaks close ties, and relevance mode preserves Fuse order.
+- Persist sorting and pins independently in `chrome.storage.local`. Keep the manual pin order across openings and synchronize external storage changes. Failed initial reads must not allow empty state to overwrite saved pins; display save/load failures inline.
+- Plain left/right arrows and selected-text copy retain normal input behavior. Use `Alt+Left/Right` for source filtering. Focused buttons retain native Enter/Space activation.
+
+### Recent Searches
+
+**`recent-searches`** — Popover anchored under the search input, listing the last five queries. It replaced the inline history row that used to sit above the results.
+
+- **Trigger**: `Space` while the input is empty. Space is a normal query character, so the trigger never fires once text exists; opening the popover does not insert a space.
+- **Placement**: absolutely positioned inside the header (`left/right: 12px`, `top: 100%`), overlaying the filter bar and results rather than pushing them. `{rounded.xl}`, hairline border, `{colors.surface-1}` background, `shadow-xl`, max height 288px with scroll.
+- **Focus**: stays in the input — the popover is driven with ↑↓ and `Enter`, so typing a new query immediately replaces the list. Options are `role="option"` inside a `role="listbox"`; the input carries `aria-activedescendant` for the highlighted row.
+- **Rows**: 28px, history icon + truncated query, highlighted row uses `bg-primary/15` + `{colors.primary}`. `{typography.label-caps}` heading "最近搜索" above the list.
+- **Clear**: a `清空最近搜索` button under a hairline divider empties the stored history; the popover then stops opening.
+- **Dismissal**: query typed, option picked, clear, `Esc` (first press closes only the popover), or a click outside.
+
 ### Search Header
 
 **`search-header`** — Sticky top bar containing the search icon, input, clear button, and shortcut chip.
@@ -451,7 +473,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 
 - Border-top: `1px {colors.hairline}`. Background: `{colors.surface-2}` at 60% opacity.
 - Padding: `8px 12px`. Font: 11px, `{colors.ink-subtle}`.
-- Left side: shortcut groups — ↑↓ 导航, ↵ 打开/搜索, ⌘↵ 新标签, 1–9 直达, ⌘C 复制链接 (only when a result is selected).
+- Left side: shortcut groups — ↑↓ 导航, Space 最近搜索 (empty query with saved history), ↵ 打开/搜索, ⌘↵ 新标签, 1–9 直达, ⌘C 复制链接 (only when a result is selected).
 - Right side: theme toggle button (cycles light/dark/system) and Esc hint ("清空" or "关闭" depending on query state).
 - Some shortcut groups hide below `sm` breakpoint to avoid overflow.
 

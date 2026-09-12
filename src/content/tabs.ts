@@ -1,5 +1,6 @@
 import { getExtensionFaviconUrl } from "../adapters/favicon";
 import { palette, withAlpha, type Theme } from "../design/tokens";
+import { isolatePanelKeys } from "./panelKeys";
 
 const HOST_ID = "quickmark-tabs-root";
 
@@ -266,7 +267,9 @@ function render(): void {
   }
 }
 function closeTab(tabId: number, index: number): void {
+  const requestHost = host;
   void sendMessage<{ ok: boolean }>({ type: "QUICKMARK_CLOSE_TAB", tabId }).then((response) => {
+    if (!requestHost || host !== requestHost) return;
     if (response?.ok) {
       state.tabs = state.tabs.filter((tab) => tab.id !== tabId);
       const nextTabs = visibleTabs();
@@ -294,11 +297,13 @@ function activate(index = state.selected): void {
 }
 
 function refresh(): void {
+  const requestHost = host;
   void sendMessage<TabsResponse>({ type: "QUICKMARK_LIST_TABS" }).then((response) => {
+    if (!requestHost || host !== requestHost) return;
     if (!response || !Array.isArray(response.tabs)) return;
     state.tabs = response.tabs;
     state.activeId = response.activeId;
-    state.selected = Math.min(state.selected, Math.max(state.tabs.length - 1, 0));
+    state.selected = Math.min(state.selected, Math.max(visibleTabs().length - 1, 0));
     render();
   });
 }
@@ -328,6 +333,7 @@ function openTabsOverlay(): void {
 
   host = document.createElement("div");
   host.id = HOST_ID;
+  isolatePanelKeys(host);
   const shadow = host.attachShadow({ mode: "closed" });
   const style = document.createElement("style");
   style.textContent = STYLE;
@@ -443,6 +449,7 @@ function openTabsOverlay(): void {
       }
       return;
     }
+    if (event.target instanceof Element && event.target.closest("button")) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
       move(2);

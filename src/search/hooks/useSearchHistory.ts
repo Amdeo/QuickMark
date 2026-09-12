@@ -51,7 +51,6 @@ export async function addSearchHistory(query: string): Promise<void> {
 
 export function useSearchHistory() {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useEffect(() => {
     ensureSearchHistoryLoaded().then(() => setSearchHistory(getSearchHistory()));
@@ -62,10 +61,14 @@ export function useSearchHistory() {
     setSearchHistory(getSearchHistory());
   };
 
+  const clearSearchHistory = async () => {
+    await saveSearchHistory([]);
+    setSearchHistory(getSearchHistory());
+  };
+
   return {
     searchHistory,
-    historyExpanded,
-    setHistoryExpanded,
     recordSearch,
+    clearSearchHistory,
   };
 }

@@ -3,6 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type { BookmarkItem } from "../domain/types";
 import { isHttpUrl } from "../domain/search";
 import { SearchApp } from "../search/SearchApp";
+import { isolatePanelKeys } from "./panelKeys";
 
 // 搜索 UI 大包：由 content/index.tsx（轻量 boot）在用户按下快捷键时
 // 动态加载，避免拼音字典等重依赖在每个页面常驻解析。
@@ -35,6 +36,7 @@ async function openOverlay(): Promise<void> {
   host.style.visibility = "hidden";
 
   const shadow = host.attachShadow({ mode: "open" });
+  isolatePanelKeys(host);
   const styleLink = document.createElement("link");
   styleLink.id = STYLE_ID;
   styleLink.rel = "stylesheet";
@@ -82,7 +84,8 @@ async function openBookmarkFromContentScript(item: BookmarkItem, newTab: boolean
     return;
   }
   if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
-    await chrome.runtime.sendMessage({ type: "QUICKMARK_OPEN_URL", url: item.url, newTab });
+    const response = await chrome.runtime.sendMessage({ type: "QUICKMARK_OPEN_URL", url: item.url, newTab });
+    if (!response?.ok) throw new Error(response?.error || "无法打开网址。");
   } else {
     window.open(item.url, "_blank");
   }

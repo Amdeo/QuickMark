@@ -12,6 +12,9 @@ import {
   History,
   Copy,
   Check,
+  Pin,
+  PinOff,
+  SlidersHorizontal,
   type LucideProps,
 } from "lucide-react";
 
@@ -29,6 +32,9 @@ const iconMap = {
   history: History,
   copy: Copy,
   check: Check,
+  pin: Pin,
+  pin_off: PinOff,
+  filter: SlidersHorizontal,
 };
 
 export type IconName = keyof typeof iconMap;

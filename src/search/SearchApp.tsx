@@ -1,5 +1,4 @@
 import {
-  Fragment,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -15,54 +14,29 @@ import {
   isNearScrollBottom,
 } from "./display";
 import {
-  groupByDomain,
   isHttpUrl,
   resolveDirectUrl,
-  type SortMode,
   type SourceFilter,
   type TimeFilter,
 } from "../domain/search";
-import {
-  copyUrlToClipboard,
-  type ClipboardLike,
-} from "./clipboard";
-import {
-  useTheme,
-  ensureThemePreferenceLoaded,
-  saveThemePreference,
-  getEffectiveTheme,
-  type ThemePreference,
-} from "./hooks/useTheme";
+import { copyUrlToClipboard } from "./clipboard";
+import { useTheme } from "./hooks/useTheme";
 import {
   useSearchHistory,
-  ensureSearchHistoryLoaded,
-  getSearchHistory,
-  saveSearchHistory,
-  addSearchHistory,
 } from "./hooks/useSearchHistory";
+import { MAX_PINNED_SITES, useSearchPreferences } from "./hooks/useSearchPreferences";
+import { PinnedSites } from "./components/PinnedSites";
+import { RecentSearches } from "./components/RecentSearches";
+import { getExtensionFaviconUrl } from "../adapters/favicon";
 import { Kbd } from "./components/Kbd";
-import { BookmarkRow, GroupHeader, LoadingRow } from "./components/BookmarkRow";
+import { BookmarkRow, LoadingRow } from "./components/BookmarkRow";
 import { EmptyState } from "./components/EmptyState";
 import { FilterBar } from "./components/FilterBar";
 import { SearchFooter } from "./components/SearchFooter";
 
 const RESULT_PAGE_SIZE = 50;
-const DEFAULT_ITEMS_PER_DOMAIN = 3;
 const SCROLL_ANCHOR = 88; // 选中项期望停留在滚动容器顶部下方的舒适位置
 
-// 导出供现有测试与调用方使用，保持向后兼容
-export {
-  copyUrlToClipboard,
-  type ClipboardLike,
-  ensureThemePreferenceLoaded,
-  saveThemePreference,
-  getEffectiveTheme,
-  type ThemePreference,
-  ensureSearchHistoryLoaded,
-  getSearchHistory,
-  saveSearchHistory,
-  addSearchHistory,
-};
 
 function isComposingEvent(event: { nativeEvent: KeyboardEvent }): boolean {
   return event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
@@ -107,26 +81,26 @@ export function SearchApp({
   const { themePref, effectiveTheme, cycleTheme } = useTheme();
   const {
     searchHistory,
-    historyExpanded,
-    setHistoryExpanded,
     recordSearch,
+    clearSearchHistory,
   } = useSearchHistory();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
-  const [sortMode, setSortMode] = useState<SortMode>("smart");
-  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const { sortMode, setSortMode, pinnedSites, togglePinnedSite, movePinnedSite, isLoaded: preferencesLoaded, error: preferencesError } = useSearchPreferences();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [recentsOpen, setRecentsOpen] = useState(false);
+  const [recentIndex, setRecentIndex] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const selectedItemRef = useRef<BookmarkItem | undefined>(undefined);
   const shouldScrollSelectionRef = useRef(false);
-  const [expandedDomains, setExpandedDomains] = useState<ReadonlySet<string>>(new Set());
   const [copyState, setCopyState] = useState<{ id: string; ok: boolean } | null>(null);
+  const [openError, setOpenError] = useState<string>();
   const copyTimerRef = useRef<number | undefined>(undefined);
 
   const {
-    filteredItems,
+    bookmarks,
     results,
     isLoading,
     error,
@@ -137,14 +111,52 @@ export function SearchApp({
 
   // Address-bar semantics: a complete URL or bare domain navigates directly.
   const directUrl = useMemo(() => resolveDirectUrl(query), [query]);
+  const modifierLabel = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+  const pinnedUrls = useMemo(() => new Set(pinnedSites.map((site) => site.url)), [pinnedSites]);
+  const pinnedItems = useMemo(() => pinnedSites.map((site): BookmarkItem =>
+    bookmarks.find((item) => item.url === site.url) ?? {
+      id: `pinned:${site.url}`,
+      title: site.title,
+      url: site.url,
+      domain: new URL(site.url).hostname,
+      favicon: getExtensionFaviconUrl(site.url),
+      visitCount: 0,
+    }
+  ), [bookmarks, pinnedSites]);
+  // 固定区可见时先占数字键，结果行接着编号，保证角标与实际按键一致。
+  const shortcutOffset = query.trim() ? 0 : pinnedItems.length;
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  // 只有在搜索框为空时按空格才会打开最近搜索；一旦有输入或历史清空就收起。
+  useEffect(() => {
+    if (query || searchHistory.length === 0) setRecentsOpen(false);
+  }, [query, searchHistory.length]);
+
+  function openRecentSearches() {
+    setRecentIndex(0);
+    setRecentsOpen(true);
+  }
+
+  function pickRecentSearch(value: string) {
+    setRecentsOpen(false);
+    setQuery(value);
+    inputRef.current?.focus();
+  }
+
+  function clearRecentSearches() {
+    setRecentsOpen(false);
+    inputRef.current?.focus();
+    void clearSearchHistory();
+  }
+
   useEffect(() => {
     setSelectedIndex(0);
     setVisibleResultCount(RESULT_PAGE_SIZE);
+    setOpenError(undefined);
+    if (listRef.current) listRef.current.scrollTop = 0;
   }, [query, sourceFilter, timeFilter, sortMode]);
 
   useEffect(() => {
@@ -192,41 +204,11 @@ export function SearchApp({
     return parts.join(" · ");
   }, [isLoading, error, query, results.length, bookmarkCount, historyCount, sourceFilter, timeFilter]);
 
-  const loadedResults = useMemo(
+  const visibleResults = useMemo(
     () => results.slice(0, visibleResultCount),
     [results, visibleResultCount]
   );
 
-  const groups = useMemo(
-    () => groupByDomain(loadedResults, filteredItems),
-    [loadedResults, filteredItems]
-  );
-
-  const renderedGroups = useMemo(() => {
-    let flatIndex = 0;
-    return groups.map((group) => {
-      const isGrouped = group.items.length > 1;
-      const isExpanded = expandedDomains.has(group.domain);
-      // 派生首页不占用折叠组的真实记录显示名额。
-      const collapsedCount = DEFAULT_ITEMS_PER_DOMAIN + Number(group.items.length > group.count);
-      const items =
-        isGrouped && !isExpanded
-          ? group.items.slice(0, collapsedCount)
-          : group.items;
-      const entries = items.map((item) => ({ item, flatIndex: flatIndex++ }));
-      return {
-        group,
-        isGrouped,
-        isExpanded,
-        entries,
-      };
-    });
-  }, [groups, expandedDomains]);
-
-  const visibleResults = useMemo(
-    () => renderedGroups.flatMap((g) => g.entries.map((e) => e.item)),
-    [renderedGroups]
-  );
 
   const selected = visibleResults[selectedIndex];
 
@@ -246,23 +228,6 @@ export function SearchApp({
     }
   }, [visibleResults.length, selectedIndex]);
 
-  // 仅当选中索引变化时记录目标条目；展开/收起分组会改变 visibleResults
-  // 但不应覆盖 ref，否则下面的校正 effect 无法把选中项跟随到新位置。
-  useEffect(() => {
-    const current = visibleResults[selectedIndex];
-    if (current) {
-      selectedItemRef.current = current;
-    }
-  }, [selectedIndex, visibleResults]);
-
-  useEffect(() => {
-    const target = selectedItemRef.current;
-    if (!target) return;
-    const newIndex = visibleResults.findIndex((item) => item.id === target.id);
-    if (newIndex >= 0 && newIndex !== selectedIndex) {
-      setSelectedIndex(newIndex);
-    }
-  }, [visibleResults, selectedIndex]);
 
   async function openSelected(newTab: boolean): Promise<void> {
     if (directUrl) {
@@ -275,20 +240,26 @@ export function SearchApp({
       }
       return;
     }
-    if (query.trim()) {
-      void recordSearch(query.trim());
+    await openItem(selected, newTab);
+  }
+
+  async function openItem(item: BookmarkItem, newTab: boolean): Promise<void> {
+    setOpenError(undefined);
+    try {
+      await openBookmark(item, newTab);
+      if (query.trim()) void recordSearch(query.trim());
+      void markVisited(item.id);
+      onClose?.();
+    } catch {
+      setOpenError("打开失败，请重试。");
     }
-    void markVisited(selected.id);
-    await openBookmark(selected, newTab);
-    onClose?.();
   }
 
   async function openDirectUrl(q: string, targetUrl: string, newTab: boolean): Promise<void> {
-    void recordSearch(q);
-    await openBookmark(
+    await openItem(
       {
         id: `direct-${Date.now()}`,
-        title: targetUrl,
+        title: q,
         url: targetUrl,
         domain: "",
         favicon: "",
@@ -297,13 +268,11 @@ export function SearchApp({
       },
       newTab
     );
-    onClose?.();
   }
 
   async function openWebSearch(q: string, newTab = false): Promise<void> {
-    void recordSearch(q);
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
-    await openBookmark(
+    await openItem(
       {
         id: `search-${Date.now()}`,
         title: `Google 搜索: ${q}`,
@@ -315,7 +284,6 @@ export function SearchApp({
       },
       newTab
     );
-    onClose?.();
   }
 
   async function copyItemUrl(item: BookmarkItem): Promise<void> {
@@ -337,17 +305,6 @@ export function SearchApp({
     };
   }, []);
 
-  function toggleDomain(domain: string): void {
-    setExpandedDomains((prev) => {
-      const next = new Set(prev);
-      if (next.has(domain)) {
-        next.delete(domain);
-      } else {
-        next.add(domain);
-      }
-      return next;
-    });
-  }
 
   useEffect(() => {
     function onEscapeCapture(event: KeyboardEvent) {
@@ -355,8 +312,14 @@ export function SearchApp({
       if (event.isComposing || event.keyCode === 229) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (sortMenuOpen) {
-        setSortMenuOpen(false);
+      if (recentsOpen) {
+        setRecentsOpen(false);
+        inputRef.current?.focus();
+        return;
+      }
+      if (menuOpen) {
+        setMenuOpen(false);
+        inputRef.current?.focus();
         return;
       }
       if (query) {
@@ -367,7 +330,7 @@ export function SearchApp({
     }
     document.addEventListener("keydown", onEscapeCapture, true);
     return () => document.removeEventListener("keydown", onEscapeCapture, true);
-  }, [query, onClose, sortMenuOpen]);
+  }, [query, onClose, menuOpen, recentsOpen]);
 
   return (
     <main
@@ -379,6 +342,42 @@ export function SearchApp({
       onKeyDown={(event) => {
         if (isComposingEvent(event)) {
           return;
+        }
+        if (event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+          if (event.code === "KeyP" || event.key.toLowerCase() === "p") {
+            if (selected && preferencesLoaded) {
+              event.preventDefault();
+              togglePinnedSite(selected);
+            }
+            return;
+          }
+          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            const filters: SourceFilter[] = ["all", "bookmark", "history"];
+            setSourceFilter(filters[(filters.indexOf(sourceFilter) + (event.key === "ArrowLeft" ? 2 : 1)) % 3]);
+            return;
+          }
+        }
+        // Buttons keep native Enter/Space behavior; editing keys belong to the input.
+        if (event.target !== inputRef.current || menuOpen) return;
+        // 空格是查询里的正常字符，唯有搜索框为空时改为展开最近搜索。
+        if (event.key === " " && !query) {
+          event.preventDefault();
+          openRecentSearches();
+          return;
+        }
+        if (recentsOpen && searchHistory.length > 0) {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            const delta = event.key === "ArrowDown" ? 1 : -1;
+            setRecentIndex((index) => (index + delta + searchHistory.length) % searchHistory.length);
+            return;
+          }
+          if (event.key === "Enter") {
+            event.preventDefault();
+            pickRecentSearch(searchHistory[Math.min(recentIndex, searchHistory.length - 1)]);
+            return;
+          }
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
@@ -396,34 +395,20 @@ export function SearchApp({
             setSelectedIndex(nextIndex);
           }
         }
-        if (event.key === "ArrowLeft") {
-          event.preventDefault();
-          const filters = ["all", "bookmark", "history"] as SourceFilter[];
-          const idx = filters.indexOf(sourceFilter);
-          setSourceFilter(filters[(idx - 1 + filters.length) % filters.length]);
-        }
-        if (event.key === "ArrowRight") {
-          event.preventDefault();
-          const filters = ["all", "bookmark", "history"] as SourceFilter[];
-          const idx = filters.indexOf(sourceFilter);
-          setSourceFilter(filters[(idx + 1) % filters.length]);
-        }
         if (event.key === "Enter") {
           event.preventDefault();
           void openSelected(event.metaKey || event.ctrlKey);
         }
         if (/^[1-9]$/.test(event.key) && (event.metaKey || event.ctrlKey)) {
           event.preventDefault();
-          const index = parseInt(event.key, 10) - 1;
-          const target = visibleResults[index];
+          const slot = parseInt(event.key, 10) - 1;
+          const target = slot < shortcutOffset ? pinnedItems[slot] : visibleResults[slot - shortcutOffset];
           if (target) {
-            void markVisited(target.id);
-            void openBookmark(target, false);
-            onClose?.();
+            void openItem(target, false);
           }
         }
         if ((event.key === "c" || event.key === "C") && (event.metaKey || event.ctrlKey)) {
-          if (selected) {
+          if (selected && inputRef.current?.selectionStart === inputRef.current?.selectionEnd) {
             event.preventDefault();
             void copyItemUrl(selected);
           }
@@ -439,7 +424,7 @@ export function SearchApp({
         ].join(" ")}
       >
         {/* Header Search Input */}
-        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-outline-variant/40 px-4">
+        <div className="relative flex h-14 shrink-0 items-center gap-3 border-b border-outline-variant/40 px-4">
           <Icon name="search" size={20} className="shrink-0 text-outline" />
           <input
             ref={inputRef}
@@ -447,16 +432,21 @@ export function SearchApp({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜索书签、历史记录，或输入网址直达…"
-            className="flex-1 bg-transparent text-[15px] font-medium text-on-surface placeholder:text-outline/60 focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-on-surface placeholder:text-outline/60 focus:outline-none"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
             role="combobox"
+            aria-label="搜索书签和历史记录"
             aria-expanded="true"
-            aria-controls="quickmark-results"
+            aria-controls={recentsOpen ? "quickmark-results quickmark-recents" : "quickmark-results"}
             aria-activedescendant={
-              selected ? `quickmark-result-${selected.id}` : undefined
+              recentsOpen
+                ? `quickmark-recent-${recentIndex}`
+                : selected
+                  ? `quickmark-result-${selected.id}`
+                  : undefined
             }
           />
           {query ? (
@@ -474,9 +464,20 @@ export function SearchApp({
             </button>
           ) : null}
           <span className="flex shrink-0 items-center gap-0.5">
-            <Kbd>Ctrl</Kbd>
+            <Kbd>{modifierLabel}</Kbd>
+            <Kbd>Shift</Kbd>
             <Kbd>K</Kbd>
           </span>
+          {recentsOpen && searchHistory.length > 0 ? (
+            <RecentSearches
+              items={searchHistory}
+              activeIndex={Math.min(recentIndex, searchHistory.length - 1)}
+              onHover={setRecentIndex}
+              onPick={pickRecentSearch}
+              onClear={clearRecentSearches}
+              onClose={() => setRecentsOpen(false)}
+            />
+          ) : null}
         </div>
 
         {/* Filter and Sort Bar */}
@@ -487,15 +488,31 @@ export function SearchApp({
           setTimeFilter={setTimeFilter}
           sortMode={sortMode}
           setSortMode={setSortMode}
-          sortMenuOpen={sortMenuOpen}
-          setSortMenuOpen={setSortMenuOpen}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
           query={query}
-        />
+        >
+          {!query.trim() && preferencesLoaded ? (
+            <PinnedSites
+              items={pinnedItems}
+              modifierLabel={modifierLabel}
+              onOpen={(index, newTab) => void openItem(pinnedItems[index], newTab)}
+              onUnpin={togglePinnedSite}
+              onReorder={movePinnedSite}
+            />
+          ) : null}
+        </FilterBar>
+
+        {preferencesError || openError ? (
+          <div role="alert" className="shrink-0 px-4 py-2 text-[12px] text-error">
+            {preferencesError || openError}
+          </div>
+        ) : null}
 
         {/* Results / Content Area */}
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto py-2"
+          className="min-h-0 flex-1 overflow-y-auto py-2"
           onScroll={(event) => {
             if (isNearScrollBottom(event.currentTarget)) {
               setVisibleResultCount((count) =>
@@ -504,123 +521,41 @@ export function SearchApp({
             }
           }}
         >
-          {!query.trim() && searchHistory.length > 0 ? (
-            <div className="mb-1">
-              {historyExpanded ? (
-                <>
-                  <div className="flex items-center justify-between px-4 pb-0.5 pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-outline/80">
-                    <span>最近搜索</span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setHistoryExpanded(false)}
-                        className="cursor-pointer rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-tight text-outline/70 transition-colors hover:bg-surface-container hover:text-on-surface"
-                      >
-                        收起
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void saveSearchHistory([]).then(() => {
-                            void recordSearch("");
-                          });
-                        }}
-                        className="cursor-pointer rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-tight text-outline/70 transition-colors hover:bg-surface-container hover:text-on-surface"
-                      >
-                        清空
-                      </button>
-                    </div>
-                  </div>
-                  <div className="hide-scrollbar flex gap-1.5 overflow-x-auto px-4 py-1">
-                    {searchHistory.map((h) => (
-                      <button
-                        key={h}
-                        type="button"
-                        onClick={() => setQuery(h)}
-                        className="flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-surface-container px-2.5 text-[12px] text-on-surface transition-colors hover:bg-surface-container-high"
-                      >
-                        <Icon name="history" size={12} className="shrink-0 text-outline/60" />
-                        <span className="truncate">{h}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-between px-4 py-1.5">
-                  <span className="text-[11px] text-outline/60">
-                    最近搜索 · {searchHistory.length} 条
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setHistoryExpanded(true)}
-                    className="cursor-pointer rounded-md px-1.5 py-0.5 text-[10px] font-medium tracking-tight text-outline/70 transition-colors hover:bg-surface-container hover:text-on-surface"
-                  >
-                    展开
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {query.trim() && results.length > 0 ? (
+          {results.length > 0 ? (
             <div className="px-4 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-wider text-outline/80">
-              {statusText}
+              {statusText}{!query.trim() && sortMode === "smart" ? " · 最近常用优先" : ""}
             </div>
           ) : null}
 
           <div id="quickmark-results" className="flex flex-col" role="listbox" aria-label="搜索结果">
-            {isLoading && results.length === 0 ? (
+            {(isLoading || !preferencesLoaded) && results.length === 0 ? (
               <>
                 <LoadingRow />
                 <LoadingRow />
                 <LoadingRow />
               </>
             ) : null}
-            {renderedGroups.map(({ group, isGrouped, isExpanded, entries }) => {
-              const rows = entries.map(({ item, flatIndex }, rowIndex) => (
-                <BookmarkRow
-                  key={item.id}
-                  item={item}
-                  folderPath={folderPaths.get(item.id) ?? []}
-                  query={query}
-                  index={flatIndex}
-                  isSelected={flatIndex === selectedIndex}
-                  isCopied={copyState?.id === item.id && copyState.ok}
-                  copyFailed={copyState?.id === item.id && !copyState.ok}
-                  grouped={isGrouped}
-                  alternate={isGrouped && rowIndex % 2 === 1}
-                  onMouseEnter={() => {
-                    shouldScrollSelectionRef.current = false;
-                    setSelectedIndex(flatIndex);
-                  }}
-                  onOpen={(newTab) => void openSelected(newTab)}
-                  onCopy={() => void copyItemUrl(item)}
-                />
-              ));
-
-              return (
-                <Fragment key={group.domain}>
-                  {isGrouped ? (
-                    <GroupHeader
-                      domain={group.domain}
-                      count={group.count}
-                      isExpanded={isExpanded}
-                      onToggle={() => toggleDomain(group.domain)}
-                    />
-                  ) : null}
-                  {isGrouped ? (
-                    <div
-                      role="presentation"
-                      className="mx-2 overflow-hidden rounded-xl bg-surface-container-low ring-1 ring-outline-variant/25"
-                    >
-                      {rows}
-                    </div>
-                  ) : (
-                    rows
-                  )}
-                </Fragment>
-              );
-            })}
+            {visibleResults.map((item, index) => (
+              <BookmarkRow
+                key={item.id}
+                item={item}
+                folderPath={folderPaths.get(item.id) ?? []}
+                query={query}
+                shortcutKey={index + 1 + shortcutOffset <= 9 ? index + 1 + shortcutOffset : undefined}
+                isSelected={index === selectedIndex}
+                isCopied={copyState?.id === item.id && copyState.ok}
+                copyFailed={copyState?.id === item.id && !copyState.ok}
+                isPinned={pinnedUrls.has(item.url)}
+                pinDisabled={!preferencesLoaded || (!pinnedUrls.has(item.url) && pinnedSites.length >= MAX_PINNED_SITES)}
+                onMouseEnter={() => {
+                  shouldScrollSelectionRef.current = false;
+                  setSelectedIndex(index);
+                }}
+                onOpen={(newTab) => void openItem(item, newTab)}
+                onCopy={() => void copyItemUrl(item)}
+                onTogglePin={() => togglePinnedSite(item)}
+              />
+            ))}
           </div>
 
           {error ? (
@@ -653,10 +588,12 @@ export function SearchApp({
         <SearchFooter
           directUrl={directUrl}
           hasQuery={Boolean(query)}
+          hasHistory={searchHistory.length > 0}
           hasSelected={Boolean(selected)}
           themePref={themePref}
           effectiveTheme={effectiveTheme}
           onCycleTheme={cycleTheme}
+          modifierLabel={modifierLabel}
           onClose={onClose}
         />
       </section>

@@ -201,3 +201,29 @@ test("markVisited is a no-op for unknown ids or an empty cache", async () => {
   const { results } = await cache.getBookmarks();
   expect(results).toEqual([]);
 });
+
+test("late persisted cache restore cannot replace a completed fresh load", async () => {
+  const oldResults = [{ item: bookmark, folderPath: [] }];
+  const freshResults = [{ item: updatedBookmark, folderPath: [] }];
+  let resolveRead!: (results: typeof oldResults) => void;
+  const read = new Promise<typeof oldResults>((resolve) => { resolveRead = resolve; });
+  const cache = createBookmarkCache(async () => freshResults, {
+    storage: { read: () => read, write: async () => {} },
+  });
+  const normal = cache.getBookmarks();
+  await cache.getBookmarks({ preferFresh: true });
+  resolveRead(oldResults);
+  expect((await normal).results).toEqual(freshResults);
+  expect((await cache.getBookmarks()).results).toEqual(freshResults);
+});
+
+test("unreadable persisted cache still loads native bookmark data", async () => {
+  const freshResults = [{ item: updatedBookmark, folderPath: [] }];
+  const cache = createBookmarkCache(async () => freshResults, {
+    storage: {
+      read: async () => { throw new Error("storage unavailable"); },
+      write: async () => {},
+    },
+  });
+  expect((await cache.getBookmarks()).results).toEqual(freshResults);
+});

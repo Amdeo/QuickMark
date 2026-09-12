@@ -5,9 +5,11 @@ import { Kbd } from "./Kbd";
 interface SearchFooterProps {
   directUrl?: string;
   hasQuery: boolean;
+  hasHistory: boolean;
   hasSelected: boolean;
   themePref: ThemePreference;
   effectiveTheme: "light" | "dark";
+  modifierLabel: string;
   onCycleTheme: () => void;
   onClose?: () => void;
 }
@@ -15,9 +17,11 @@ interface SearchFooterProps {
 export function SearchFooter({
   directUrl,
   hasQuery,
+  hasHistory,
   hasSelected,
   themePref,
   effectiveTheme,
+  modifierLabel,
   onCycleTheme,
   onClose,
 }: SearchFooterProps) {
@@ -28,6 +32,12 @@ export function SearchFooter({
           <Kbd>↑↓</Kbd>
           <span>导航</span>
         </span>
+        {!hasQuery && hasHistory ? (
+          <span className="flex items-center gap-1.5">
+            <Kbd>Space</Kbd>
+            <span>最近搜索</span>
+          </span>
+        ) : null}
         <span className="flex items-center gap-1.5">
           <Kbd>↵</Kbd>
           <span>
@@ -36,14 +46,14 @@ export function SearchFooter({
         </span>
         <span className="hidden items-center gap-1.5 sm:flex">
           <span className="flex items-center gap-0.5">
-            <Kbd>Ctrl</Kbd>
+            <Kbd>{modifierLabel}</Kbd>
             <Kbd>↵</Kbd>
           </span>
           <span>新标签</span>
         </span>
         <span className="hidden items-center gap-1.5 sm:flex">
           <span className="flex items-center gap-0.5">
-            <Kbd>Ctrl</Kbd>
+            <Kbd>{modifierLabel}</Kbd>
             <Kbd>1–9</Kbd>
           </span>
           <span>直达</span>
@@ -51,12 +61,20 @@ export function SearchFooter({
         {hasSelected ? (
           <span className="hidden items-center gap-1.5 lg:flex">
             <span className="flex items-center gap-0.5">
-              <Kbd>Ctrl</Kbd>
+              <Kbd>{modifierLabel}</Kbd>
               <Kbd>C</Kbd>
             </span>
             <span>复制链接</span>
           </span>
         ) : null}
+        <span className="hidden items-center gap-1.5 sm:flex">
+          <Kbd>Alt P</Kbd>
+          <span>固定</span>
+        </span>
+        <span className="hidden items-center gap-1.5 lg:flex">
+          <Kbd>Alt ←→</Kbd>
+          <span>筛选</span>
+        </span>
       </div>
       <div className="flex items-center gap-2">
         <button

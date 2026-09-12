@@ -17,13 +17,13 @@
 - **One keystroke away** — `Cmd/Ctrl + Shift + K` opens a search palette over the current page
 - **Fuzzy search** across title, URL and domain with Fuse.js
 - **Pinyin search** for Chinese titles (e.g. `zhihu` finds 知乎)
-- **Combined results** — bookmarks and browser history in one list, grouped by domain
-- **Visual domain groups** — records of the same site collapse into distinct cards with alternating row colors
-- **Filters** — source (all / bookmark / history) and time range (today / week / month)
-- **Sort modes** — smart, recent, frequent, title, created, relevance
+- **Flat results** — bookmarks and browser history in one ranked list, without domain grouping or inserted homepage links
+- **Pinned websites** — pin up to eight exact URLs; an icon-only strip inside the filter bar keeps frequently used sites one click away, and `Cmd/Ctrl + 1–8` opens them
+- **Filters** — source chips (all / bookmark / history), plus one dropdown that carries both the time range (all time / today / week / month) and the sort mode, labelled with the active non-default choices
+- **Remembered sort modes** — smart, recent, frequent, title, created, relevance; smart balances recent visits and time-decayed frequency, not bookmark creation time
 - **Address-bar semantics** — `Enter` on a complete URL or bare domain (e.g. `github.com`) navigates directly
 - **Keyboard-first** — `Enter` opens in the current tab, `Cmd/Ctrl + Enter` in a new tab, `Cmd/Ctrl + 1-9` jumps to the N-th result, `Cmd/Ctrl + C` copies the URL
-- **Search history** — last 5 queries, one click to re-run or clear
+- **Search history** — last 5 queries; press `Space` in the empty box to open a dropdown, pick with ↑↓ + `Enter`, and clear the whole list from its footer
 - **Web-search fallback** — no local results? Press `Enter` to search Google
 - **Light / dark / system theme**
 
@@ -57,13 +57,16 @@ QuickMark is not yet published to the Chrome Web Store. To install it from sourc
 | `↑ / ↓` | Navigate results |
 | `Enter` | Open the selected result in the current tab |
 | `Cmd/Ctrl + Enter` | Open the selected result in a new tab |
-| `Cmd/Ctrl + 1–9` | Jump to the N-th visible result |
+| `Cmd/Ctrl + 1–9` | Open the N-th pinned icon, then the N-th result — pins take the first slots while the strip is visible; with a query typed, digits go straight to results |
 | `Cmd/Ctrl + C` | Copy the selected result's URL |
-| `← / →` | Cycle source filter (all / bookmark / history) |
+| `Alt + ← / →` | Cycle source filter (all / bookmark / history); plain arrows edit the query |
+| `Space` | Open the recent-searches dropdown while the query is empty (↑↓ to move, `Enter` to refill); with text present, space types normally |
 | `Esc` | Clear the query first, then close the palette |
-| Click group header | Expand / collapse results of the same domain |
+| `Alt + P` | Pin / unpin the selected result |
 
 Type a complete URL or bare domain (e.g. `kimi.com`, `localhost:3000`) and press `Enter` to navigate directly, address-bar style — even when no local results match.
+
+Pins keep their exact URL and manual order, remain available if the original bookmark/history entry disappears, and never change with ranking. Click a result's pin button to add it; the icon row shows favicons with their `Cmd/Ctrl+N` badge, hover for the name and full URL, drag an icon onto another to reorder the row, and use the small remove button to unpin. Result badges always show each row's real key: with N pins the first result is `Cmd/Ctrl + N+1`. The strip sits in the filter bar, right after the source chips and before the filter dropdown, when the query is empty; with nothing pinned the bar keeps no placeholder. Pins and the selected sort mode are saved locally and restored when reopening the palette. With a query, match relevance takes priority and the selected mode breaks close ties; without a query, recent uses actual visit time and frequent uses visit count.
 
 > A full Chinese usage guide is available in [USAGE.md](./USAGE.md).
 
@@ -80,7 +83,7 @@ npm run dev      # start the Vite dev server
 
 - `src/background` — MV3 service worker: command routing, bookmark/history cache
 - `src/content` — on-page modal overlay host (Shadow DOM), skeleton-first loading
-- `src/domain` — pure bookmark, search and grouping logic
+- `src/domain` — pure bookmark, search and ranking logic
 - `src/adapters` — Chrome bookmarks / history / favicon API adapters
 - `src/search` — React search UI and hooks
 - `public/manifest.json` — extension manifest, copied into `dist`

@@ -2,6 +2,7 @@
 // 极简骨架面板（纯 DOM，无 React），同时按需动态加载搜索 UI 大包
 // （assets/content-search.js），就绪后无缝替换。大包内含 React、Fuse.js
 // 与 pinyin-pro 字典，日常浏览零成本，只有真正打开面板才解析。
+import { isolatePanelKeys } from "./panelKeys";
 
 // 与大包 src/content/search.tsx 中的 HOST_ID 保持一致，
 // 用于判断大包是否已挂载。
@@ -197,6 +198,7 @@ function showSkeleton(): void {
 
   shadow.append(style, panel);
   document.documentElement.appendChild(host);
+  isolatePanelKeys(host);
   host.addEventListener("click", hideSkeleton);
   document.addEventListener("keydown", onSkeletonKeyDown, true);
 }

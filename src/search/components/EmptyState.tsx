@@ -90,7 +90,7 @@ export function EmptyState({
           {hasHistory ? "开始输入以搜索" : "还没有书签"}
         </div>
         <div className="mt-0.5 text-[12px] text-outline">
-          {hasHistory ? "继续输入或选择最近搜索" : "Chrome 中保存的书签会出现在这里"}
+          {hasHistory ? "按空格查看最近搜索" : "Chrome 中保存的书签会出现在这里"}
         </div>
       </div>
     </div>

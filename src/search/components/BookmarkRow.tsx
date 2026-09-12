@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { BookmarkItem } from "../../domain/types";
 import { Icon } from "../../components/Icon";
 import { getExtensionFaviconUrl } from "../../adapters/favicon";
+import { MAX_PINNED_SITES } from "../hooks/useSearchPreferences";
 import {
   compactUrl,
   formatRelativeTime,
@@ -28,42 +29,55 @@ export function HighlightedText({ text, query }: { text: string; query: string }
   );
 }
 
+export function BookmarkFavicon({ url, favicon, size = 20 }: { url: string; favicon?: string; size?: number }) {
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const fallback = getExtensionFaviconUrl(url);
+  const primary = favicon || fallback;
+  return failedAttempts < 2 ? (
+    <img
+      src={failedAttempts === 0 ? primary : fallback}
+      alt=""
+      style={{ width: size, height: size }}
+      className="object-contain"
+      onError={() => setFailedAttempts(failedAttempts === 0 && primary !== fallback ? 1 : 2)}
+    />
+  ) : <Icon name="language" size={size} className="text-primary" />;
+}
+
 export function BookmarkRow({
   item,
   folderPath,
   query,
-  index,
+  shortcutKey,
   isSelected,
   isCopied,
   copyFailed,
-  grouped = false,
-  alternate = false,
+  isPinned,
+  pinDisabled,
   onMouseEnter,
   onOpen,
   onCopy,
+  onTogglePin,
 }: {
   item: BookmarkItem;
   folderPath: string[];
   query: string;
-  index: number;
+  /** 该行对应的 Cmd/Ctrl 数字键；未分配键时不显示角标。 */
+  shortcutKey?: number;
   isSelected: boolean;
   isCopied: boolean;
   copyFailed: boolean;
-  /** 是否位于域名分组卡片内（取消外边距与独立圆角，由卡片容器裁切）。 */
-  grouped?: boolean;
-  /** 组内交替底色：奇数位置的行使用更深的底色形成斑马纹。 */
-  alternate?: boolean;
+  isPinned: boolean;
+  pinDisabled: boolean;
   onMouseEnter: () => void;
   onOpen: (newTab: boolean) => void;
   onCopy: () => void;
+  onTogglePin: () => void;
 }) {
-  const [imgSrc, setImgSrc] = useState(item.favicon);
   const displayFolderPath = getDisplayFolderPath(folderPath);
-  const rowRef = useRef<HTMLDivElement>(null);
 
   return (
     <div
-      ref={rowRef}
       id={`quickmark-result-${item.id}`}
       role="option"
       aria-selected={isSelected}
@@ -72,21 +86,15 @@ export function BookmarkRow({
       onClick={(event) => onOpen(event.metaKey || event.ctrlKey)}
       className={[
         "group relative flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors duration-150",
-        grouped ? "mx-0 rounded-none" : "mx-2 rounded-xl",
-        // 组内卡片：奇数行透出容器底色，偶数行加深形成斑马纹；
-        // hover 统一用更深的 highest，保证两种行上都有高亮反馈。
+        "mx-2 rounded-xl",
         isSelected
           ? "bg-primary-fixed/40 ring-1 ring-inset ring-primary/15"
-          : grouped
-            ? alternate
-              ? "bg-surface-container-high hover:bg-surface-container-highest"
-              : "hover:bg-surface-container-highest"
-            : "hover:bg-surface-container-low/70",
+          : "hover:bg-surface-container-low/70",
       ].join(" ")}
     >
       {/* Favicon + Number Badge */}
       <div className="relative shrink-0">
-        {index < 9 ? (
+        {shortcutKey !== undefined ? (
           <span
             className={[
               "absolute -left-1.5 -top-1.5 z-20 flex h-4 min-w-4 items-center justify-center rounded-md px-1 text-[9.5px] font-semibold transition-colors",
@@ -96,26 +104,11 @@ export function BookmarkRow({
             ].join(" ")}
             aria-hidden
           >
-            {index + 1}
+            {shortcutKey}
           </span>
         ) : null}
         <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-surface-container/70 ring-1 ring-outline-variant/30">
-          {imgSrc ? (
-            <img
-              src={imgSrc}
-              alt=""
-              className="h-full w-full object-cover"
-              onError={() => {
-                if (imgSrc === item.favicon) {
-                  setImgSrc(getExtensionFaviconUrl(item.url));
-                } else {
-                  setImgSrc("");
-                }
-              }}
-            />
-          ) : (
-            <Icon name="language" size={18} className="text-primary" />
-          )}
+          <BookmarkFavicon key={item.url} url={item.url} favicon={item.favicon} />
         </div>
       </div>
 
@@ -129,8 +122,8 @@ export function BookmarkRow({
           >
             <HighlightedText text={compactUrl(item.url)} query={query} />
           </span>
-          {item.source === "history" && item.lastVisitedAt ? (
-            <span className="flex-none whitespace-nowrap text-[11px] text-outline/70">
+          {item.lastVisitedAt ? (
+            <span className="hidden flex-none whitespace-nowrap text-[11px] text-outline/70 sm:inline" title={new Date(item.lastVisitedAt).toLocaleString()}>
               {formatRelativeTime(item.lastVisitedAt)}
             </span>
           ) : null}
@@ -145,7 +138,7 @@ export function BookmarkRow({
             </span>
           )}
           {folderPath.length > 0 && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-surface-container/60 px-1.5 py-0.5 text-[10.5px] text-outline">
+            <span className="hidden shrink-0 items-center gap-1 rounded-md bg-surface-container/60 px-1.5 py-0.5 text-[10.5px] text-outline sm:inline-flex">
               <Icon name="workspaces" size={10} className="shrink-0" />
               <span className="max-w-[140px] truncate">
                 <HighlightedText text={displayFolderPath} query={query} />
@@ -170,6 +163,24 @@ export function BookmarkRow({
         ) : null}
         <button
           type="button"
+          aria-label={`${isPinned ? "取消固定" : "固定网站"}：${item.title}`}
+          aria-pressed={isPinned}
+          disabled={pinDisabled}
+          title={isPinned ? "取消固定 · Alt+P" : pinDisabled ? `最多固定 ${MAX_PINNED_SITES} 个网站，请先取消一个` : "固定到顶部 · Alt+P"}
+          onClick={(event) => {
+            event.stopPropagation();
+            onTogglePin();
+          }}
+          className={[
+            "flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors focus:opacity-100 disabled:cursor-not-allowed disabled:text-outline/40",
+            isPinned ? "text-primary" : "text-outline hover:bg-surface-container hover:text-on-surface",
+            isSelected || isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+          ].join(" ")}
+        >
+          <Icon name={isPinned ? "pin_off" : "pin"} size={14} />
+        </button>
+        <button
+          type="button"
           aria-label={
             isCopied
               ? "已复制"
@@ -189,7 +200,7 @@ export function BookmarkRow({
               : copyFailed
                 ? "text-error"
                 : "text-outline hover:bg-surface-container hover:text-on-surface",
-            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100",
           ].join(" ")}
         >
           <Icon name={isCopied ? "check" : copyFailed ? "close" : "copy"} size={13} />
@@ -211,37 +222,6 @@ export function BookmarkRow({
   );
 }
 
-export function GroupHeader({
-  domain,
-  count,
-  isExpanded,
-  onToggle,
-}: {
-  domain: string;
-  count: number;
-  isExpanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="mx-2 mt-1 flex h-8 cursor-pointer items-center gap-2 rounded-md px-2 text-[11px] text-outline transition-colors hover:bg-surface-container-low/70 hover:text-on-surface"
-    >
-      <Icon name="workspaces" size={11} className="shrink-0 opacity-70" />
-      <span className="truncate font-medium">{domain}</span>
-      <span className="shrink-0 opacity-60">{count} 条</span>
-      <Icon
-        name="expand_more"
-        size={12}
-        className={[
-          "shrink-0 opacity-70 transition-transform",
-          isExpanded ? "rotate-180" : "",
-        ].join(" ")}
-      />
-    </button>
-  );
-}
 
 export function LoadingRow() {
   return (

@@ -1,79 +1,82 @@
-// 排序验证页：mock chrome API，渲染真实 SearchApp。
+// 验证页：mock Chrome 数据与存储，渲染真实 Shadow DOM SearchApp。
 // 构建：npx esbuild harness/harness.tsx --bundle --format=iife --platform=browser --outfile=harness/bundle.js --define:process.env.NODE_ENV='"production"' && npx tailwindcss -i src/styles.css -o harness/styles.css --minify
-// 数据刻意让 smart/recent/frequent/title 可区分：
-// - message.bilibili.com 刚访问（18 分钟前）→ 最近访问应排第 1
-// - 首页 44 次但 13 天未用 → 使用频率应上浮到第 4
-// - GitHub 19 次但 1 小时前刚用 → 智能排序第 5，使用频率第 7
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { SearchApp } from "../src/search/SearchApp";
+import type { BookmarkResult } from "../background/bookmarkCache";
 
-type BookmarkResult = {
+const now = Date.now();
+const hour = 3_600_000;
+const fixtures: Array<[string, string, number, number]> = [
+  ["GitHub", "https://github.com/", 19, 1],
+  ["GitHub Issues", "https://github.com/issues", 3, 0.3],
+  ["React 文档", "https://react.dev/", 66, 6],
+  ["MDN Web Docs", "https://developer.mozilla.org/", 25, 7],
+  ["Vite", "https://vite.dev/", 7, 2],
+  ["TypeScript", "https://www.typescriptlang.org/", 44, 13 * 24],
+  ["Vitest", "https://vitest.dev/", 8, 48],
+  ["Chrome Extensions", "https://developer.chrome.com/docs/extensions/", 23, 8 * 24],
+  ["GitHub Pull Requests", "https://github.com/pulls", 5, 24],
+];
+let results: BookmarkResult[] = fixtures.map(([title, url, visitCount, hoursAgo], index) => ({
   item: {
-    id: string;
-    title: string;
-    url: string;
-    domain: string;
-    favicon?: string;
-    lastVisitedAt?: number;
-    visitCount: number;
-    source?: "bookmark" | "history";
-  };
-  folderPath: string[];
-};
+    id: String(index), title, url, visitCount, lastVisitedAt: now - hoursAgo * hour,
+    domain: new URL(url).hostname.replace(/^www\./, ""),
+    source: index % 3 === 0 ? "bookmark" : "history",
+  },
+  folderPath: index % 3 === 0 ? ["开发工具"] : [],
+}));
 
-const NOW = Date.now();
-
-function results(): BookmarkResult[] {
-  const mk = (
-    id: string,
-    title: string,
-    url: string,
-    visitCount: number,
-    lastVisitedAt: number,
-    source: "bookmark" | "history"
-  ): BookmarkResult => ({
-    item: { id, title, url, domain: new URL(url).hostname.replace(/^www\./, ""), visitCount, lastVisitedAt, source },
-    folderPath: ["书签栏"],
-  });
-  return [
-    mk("h-msg", "消息中心 - 哔哩哔哩", "https://message.bilibili.com/#/whisper", 3, NOW - 18 * 60_000, "history"),
-    mk("h-itab", "新标签页", "https://go.itab.link/", 389, NOW - 58 * 60_000, "history"),
-    mk("h-bili", "哔哩哔哩 弹幕视频网", "https://www.bilibili.com/", 74, NOW - 5 * 3_600_000, "history"),
-    mk("h-kimi", "Kimi AI 官网 - K3 上线", "https://www.kimi.com/", 66, NOW - 6 * 3_600_000, "history"),
-    mk("h-deep", "DeepSeek - 探索未至之境", "https://chat.deepseek.com/", 25, NOW - 7 * 3_600_000, "history"),
-    mk("h-github", "GitHub", "https://github.com/", 19, NOW - 60 * 60_000, "history"),
-    mk("h-home", "首页 - 江苏蔚之领域智能科技有限公司", "http://localhost:4000/", 44, NOW - 13 * 86_400_000, "history"),
-    mk("h-agents", "AGENTS.md 1. Core Principles", "http://127.0.0.1:3080/", 8, NOW - 2 * 86_400_000, "history"),
-    mk("h-vault", "Vaultwarden Web", "https://vault.yuandongbin.asia:8443/", 23, NOW - 8 * 86_400_000, "history"),
-    mk("b-siyu", "Home - Siyu API", "https://siyu.site/", 7, NOW - 2 * 86_400_000, "bookmark"),
-    mk("b-hermes", "Hermes Studio", "https://hermes.yuandongbin.asia:8443/", 5, NOW - 86_400_000, "bookmark"),
-  ];
+type StorageListener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => void;
+const listeners = new Set<StorageListener>();
+const stored = JSON.parse(localStorage.getItem("quickmark-harness") ?? "{}") as Record<string, unknown>;
+function publish(changes: Record<string, chrome.storage.StorageChange>) {
+  for (const listener of listeners) listener(changes, "local");
 }
 
 const globalChrome = {
   runtime: {
     id: "harness",
-    sendMessage: async (message: { type: string }) => {
-      if (message.type === "QUICKMARK_GET_BOOKMARKS") return { results: results(), cached: true };
+    getURL: () => "/public/icons/icon32.png",
+    sendMessage: async (message: { type: string; id?: string }) => {
+      if (message.type === "QUICKMARK_GET_BOOKMARKS") return { results, cached: true };
+      if (message.type === "QUICKMARK_MARK_VISITED") {
+        results = results.map((result) => result.item.id === message.id ? {
+          ...result, item: { ...result.item, visitCount: result.item.visitCount + 1, lastVisitedAt: Date.now() },
+        } : result);
+        publish({ "quickmark.bookmark-cache-v1": { newValue: results } });
+      }
       return {};
     },
   },
   storage: {
-    local: { get: async () => ({}) },
-    onChanged: { addListener() {}, removeListener() {} },
+    local: {
+      get: async (keys: string | string[]) => Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map((key) => [key, stored[key]])),
+      set: async (values: Record<string, unknown>) => {
+        const changes = Object.fromEntries(Object.entries(values).map(([key, newValue]) => [key, { oldValue: stored[key], newValue }]));
+        Object.assign(stored, values);
+        localStorage.setItem("quickmark-harness", JSON.stringify(stored));
+        publish(changes);
+      },
+    },
+    onChanged: {
+      addListener: (listener: StorageListener) => listeners.add(listener),
+      removeListener: (listener: StorageListener) => listeners.delete(listener),
+    },
   },
 } as unknown as typeof chrome;
 (window as unknown as { chrome: unknown }).chrome = globalChrome;
 
-// 与内容脚本一致：把面板渲染进 shadow root，用于复现/验证
-// shadow 边界事件重定向导致的排序菜单点击失效 bug。
 const host = document.getElementById("root")!;
-host.style.cssText = "width: 768px; margin: 40px auto;";
-const shadowHost = document.createElement("div");
-shadowHost.style.cssText = "width: 768px;";
-const shadow = shadowHost.attachShadow({ mode: "open" });
+host.style.cssText = "width:min(768px,calc(100% - 32px));margin:40px auto";
+const shadow = host.attachShadow({ mode: "open" });
+const styles = document.createElement("link");
+styles.rel = "stylesheet";
+styles.href = "./styles.css";
 const app = document.createElement("div");
-shadow.append(app);
-host.append(shadowHost);
-createRoot(app).render(<SearchApp mode="modal" />);
+shadow.append(styles, app);
+createRoot(app).render(<SearchApp mode="modal" openBookmark={async (item, newTab) => {
+  // 记录实际导航目标，不离开验证页。
+  host.dataset.openedUrl = item.url;
+  host.dataset.openedNewTab = String(newTab);
+}} />);
