@@ -125,7 +125,7 @@ export function SearchApp({
       visitCount: 0,
     }
   ), [bookmarks, pinnedSites]);
-  useEffect(() => {
+useLayoutEffect(() => {
     inputRef.current?.focus();
   }, []);
 

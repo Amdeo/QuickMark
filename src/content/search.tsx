@@ -63,6 +63,10 @@ async function openOverlay(): Promise<void> {
   }
 
   root = createRoot(app);
+  // 先可见再同步提交：SearchApp 的挂载聚焦是 useLayoutEffect，在 flushSync 内同步执行，
+  // 必须作用在可见元素上——若宿主仍为 visibility:hidden，焦点不会落进输入框，
+  // 面板看着开了但上下键全部打到页面（键盘选择/滚动失灵）。同一任务内翻转，中间不产生绘制。
+  host.style.visibility = "visible";
   // 同步提交：boot 骨架在 toggleSearchOverlay() 返回后立刻撤走占位，
   // 若这里只排期渲染，撤骨架到面板进 DOM 之间会空出一帧（呼出瞬间闪一下）。
   flushSync(() => {
@@ -72,7 +76,6 @@ async function openOverlay(): Promise<void> {
       </React.StrictMode>
     );
   });
-  host.style.visibility = "visible";
 }
 
 function closeOverlay(): void {
