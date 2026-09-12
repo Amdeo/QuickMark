@@ -82,7 +82,7 @@ npm run dev      # 启动 Vite 开发服务器
 ### 项目结构
 
 - `src/background` — MV3 后台 Service Worker：命令路由、书签/历史缓存
-- `src/content` — 页面内模态覆盖层宿主（Shadow DOM），先渲染骨架、按需加载大包
+- `src/content` — 页面内模态覆盖层宿主（Shadow DOM）；搜索大包按需加载，加载超过 120ms 才用骨架面板占位
 - `src/domain` — 纯书签、搜索与排序逻辑
 - `src/adapters` — Chrome 书签 / 历史 / 图标 API 适配层
 - `src/search` — React 搜索 UI 与 Hooks

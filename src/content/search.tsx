@@ -1,4 +1,5 @@
 import React from "react";
+import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import type { BookmarkItem } from "../domain/types";
 import { isHttpUrl } from "../domain/search";
@@ -62,11 +63,15 @@ async function openOverlay(): Promise<void> {
   }
 
   root = createRoot(app);
-  root.render(
-    <React.StrictMode>
-      <SearchApp mode="modal" onClose={closeOverlay} openBookmark={openBookmarkFromContentScript} />
-    </React.StrictMode>
-  );
+  // 同步提交：boot 骨架在 toggleSearchOverlay() 返回后立刻撤走占位，
+  // 若这里只排期渲染，撤骨架到面板进 DOM 之间会空出一帧（呼出瞬间闪一下）。
+  flushSync(() => {
+    root!.render(
+      <React.StrictMode>
+        <SearchApp mode="modal" onClose={closeOverlay} openBookmark={openBookmarkFromContentScript} />
+      </React.StrictMode>
+    );
+  });
   host.style.visibility = "visible";
 }
 

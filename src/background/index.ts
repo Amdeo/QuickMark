@@ -28,11 +28,11 @@ async function writeBookmarkCache(results: BookmarkResult[]): Promise<void> {
   await chrome.storage.local.set({ [BOOKMARK_CACHE_KEY]: results });
 }
 
-chrome.commands.onCommand.addListener((command) => {
+chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "open-search") {
-    void toggleSearchOverlay();
+    void toggleSearchOverlay(tab);
   } else if (command === "open-tabs") {
-    void toggleTabsOverlay();
+    void toggleTabsOverlay(tab);
   }
 });
 chrome.runtime.onMessage.addListener((
@@ -118,8 +118,11 @@ for (const event of staleEvents) {
   event.addListener(() => bookmarkCache.markStale());
 }
 
-async function toggleSearchOverlay(): Promise<void> {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+// 命令回调自带快捷键按下时所在的激活 tab，优先用它——跨窗口切换（Tab panel 激活
+// 另一窗口的 tab）后 SW 里的 currentWindow 可能还没跟上焦点，query({active,
+// currentWindow}) 会返回空数组，快捷键就静默失效了。非命令入口（popup 等）回退查询。
+async function toggleSearchOverlay(commandTab?: chrome.tabs.Tab): Promise<void> {
+  const tab = commandTab ?? (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
 
   if (!tab?.id || !tab.url || !isSearchablePageUrl(tab.url)) {
     return;
@@ -144,8 +147,8 @@ async function injectContentScript(tabId: number): Promise<void> {
   });
 }
 
-async function toggleTabsOverlay(): Promise<void> {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+async function toggleTabsOverlay(commandTab?: chrome.tabs.Tab): Promise<void> {
+  const tab = commandTab ?? (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
   if (!tab?.id || !tab.url || !isSearchablePageUrl(tab.url)) return;
 
   try {

@@ -419,7 +419,7 @@ export function SearchApp({
         className={[
           "flex flex-col bg-surface",
           mode === "modal"
-            ? "max-h-[min(640px,calc(100vh-64px))] rounded-3xl border border-outline-variant/50 shadow-dialog overflow-hidden"
+            ? "quickmark-modal-enter max-h-[min(640px,calc(100vh-64px))] rounded-3xl border border-outline-variant/50 shadow-dialog overflow-hidden"
             : "mx-auto min-h-screen max-w-4xl p-6",
         ].join(" ")}
       >

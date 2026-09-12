@@ -20,6 +20,9 @@ type TabsModule = {
 
 let searchModulePromise: Promise<SearchModule> | undefined;
 let tabsModulePromise: Promise<TabsModule> | undefined;
+// 打开流程状态：opening 期间忽略重复按键；openCancelled 表示用户撤掉了占位。
+let opening = false;
+let openCancelled = false;
 
 chrome.runtime.onMessage.addListener((message: { type?: string }, sender: chrome.runtime.MessageSender) => {
   if (sender.id !== chrome.runtime.id) return;
@@ -52,29 +55,27 @@ async function handleToggle(): Promise<void> {
     module.toggleSearchOverlay();
     return;
   }
-  // 骨架面板显示中：忽略重复按键，等待大包加载。
-  if (document.getElementById(SKELETON_HOST_ID)) {
+  // 打开流程进行中（含骨架延迟窗口）：忽略重复按键。
+  if (opening) {
     return;
   }
-  showSkeleton();
+  opening = true;
+  openCancelled = false;
+  scheduleSkeleton();
   try {
     const module = await loadSearchModule();
-    // 骨架可能已被用户通过 Esc / 点击遮罩关闭，此时放弃打开。
-    if (!document.getElementById(SKELETON_HOST_ID)) {
+    // 用户在等待期间关掉了占位（Esc / 点遮罩），放弃打开。
+    if (openCancelled) {
       return;
     }
     await module.toggleSearchOverlay();
-    // 动态模块会等待 Shadow DOM 样式表加载完成后才挂载 React，避免无样式闪现。
-    if (document.getElementById(SKELETON_HOST_ID)) {
-      hideSkeleton();
-    } else {
-      // 用户在等待期间关闭了骨架，同时关闭已经就绪的真实面板。
-      if (document.getElementById(HOST_ID)) {
-        await module.toggleSearchOverlay();
-      }
-    }
+    // 动态模块会等待 Shadow DOM 样式表加载完成后才挂载 React，避免无样式闪现；
+    // 面板已同步提交进 DOM，这里撤占位不会留下空档。
+    hideSkeleton();
   } catch {
     hideSkeleton();
+  } finally {
+    opening = false;
   }
 }
 
@@ -106,6 +107,11 @@ function loadTabsModule(): Promise<TabsModule> {
 // 骨架面板样式与 DESIGN.md 的模态容器保持一致：
 // 24px 圆角、三层阴影、浅色 #FDFCF8 / 深色 #0C0E14，跟随系统主题。
 const SKELETON_CSS = `
+  /* 与真面板同一套入场：宿主淡入 200ms，面板升起 240ms（同 styles.css / tabs.ts）。 */
+  :host { animation: qm-skel-fade 200ms ease-out; }
+  :host(.qm-skel-leaving) { animation: qm-skel-out 150ms ease-out forwards; }
+  @keyframes qm-skel-fade { from { opacity: 0; } }
+  @keyframes qm-skel-out { to { opacity: 0; } }
   .qm-skel-panel {
     width: min(768px, 100%);
     border-radius: 24px;
@@ -113,7 +119,9 @@ const SKELETON_CSS = `
     box-shadow: 0 24px 56px -20px rgba(15,23,42,0.22), 0 8px 24px -12px rgba(15,23,42,0.10), 0 1px 2px rgba(15,23,42,0.04);
     overflow: hidden;
     font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    animation: qm-skel-rise 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
+  @keyframes qm-skel-rise { from { opacity: 0; transform: translateY(16px) scale(0.96); } }
   .qm-skel-header {
     height: 56px;
     display: flex;
@@ -147,9 +155,35 @@ const SKELETON_CSS = `
     .qm-skel-line, .qm-skel-box { background: #242631; }
   }
   @media (prefers-reduced-motion: reduce) {
+    :host, .qm-skel-panel { animation: none; }
     .qm-skel-line, .qm-skel-box { animation: none; }
   }
 `;
+
+/** 冷启动（大包要下载解析）才值得显示骨架；热路径直接把面板带入场动画放出来，避免占位闪一下。 */
+const SKELETON_DELAY_MS = 120;
+
+let skeletonTimer: number | undefined;
+
+function scheduleSkeleton(): void {
+  if (skeletonTimer !== undefined) return;
+  skeletonTimer = window.setTimeout(() => {
+    skeletonTimer = undefined;
+    showSkeleton();
+  }, SKELETON_DELAY_MS);
+}
+
+function cancelSkeleton(): void {
+  if (skeletonTimer === undefined) return;
+  window.clearTimeout(skeletonTimer);
+  skeletonTimer = undefined;
+}
+
+/** 用户主动关掉占位（Esc / 点遮罩）：正在进行的打开流程随即放弃。 */
+function dismissSkeleton(): void {
+  openCancelled = true;
+  hideSkeleton();
+}
 
 function showSkeleton(): void {
   const host = document.createElement("div");
@@ -199,23 +233,31 @@ function showSkeleton(): void {
   shadow.append(style, panel);
   document.documentElement.appendChild(host);
   isolatePanelKeys(host);
-  host.addEventListener("click", hideSkeleton);
+  host.addEventListener("click", dismissSkeleton);
   document.addEventListener("keydown", onSkeletonKeyDown, true);
 }
 
 function hideSkeleton(): void {
+  cancelSkeleton();
   const host = document.getElementById(SKELETON_HOST_ID);
-  if (host) {
-    host.removeEventListener("click", hideSkeleton);
-  }
+  if (!host) return;
+  host.removeEventListener("click", dismissSkeleton);
   document.removeEventListener("keydown", onSkeletonKeyDown, true);
-  host?.remove();
+  // 与真面板的入场交叉淡出：整块占位直接消失会在呼出瞬间闪一下。
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    host.remove();
+    return;
+  }
+  host.classList.add("qm-skel-leaving");
+  host.addEventListener("animationend", () => host.remove(), { once: true });
+  // 兜底：动画事件没到（元素被隐藏、动画被禁用）也要把占位收掉。
+  window.setTimeout(() => host.remove(), 400);
 }
 
 function onSkeletonKeyDown(event: KeyboardEvent): void {
   if (event.key === "Escape") {
     event.preventDefault();
     event.stopImmediatePropagation();
-    hideSkeleton();
+    dismissSkeleton();
   }
 }

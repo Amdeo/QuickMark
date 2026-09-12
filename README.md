@@ -82,7 +82,7 @@ npm run dev      # start the Vite dev server
 ### Project layout
 
 - `src/background` — MV3 service worker: command routing, bookmark/history cache
-- `src/content` — on-page modal overlay host (Shadow DOM), skeleton-first loading
+- `src/content` — on-page modal overlay host (Shadow DOM); the heavy search bundle loads on demand, and a placeholder panel covers waits longer than 120ms
 - `src/domain` — pure bookmark, search and ranking logic
 - `src/adapters` — Chrome bookmarks / history / favicon API adapters
 - `src/search` — React search UI and hooks

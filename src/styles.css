@@ -261,8 +261,10 @@ body {
   }
 }
 
-/* Modal entrance: rise + fade with a light spring overshoot. The global
-   prefers-reduced-motion rule above still collapses this to instant. */
+/* Modal entrance: rise + fade with a light spring overshoot. Same scheme as the
+   tabs panel (.qt-rise / .qt-fade); prefers-reduced-motion drops the animation
+   entirely rather than relying on a collapsed duration, so the panel never
+   depends on an animation tick to reach opacity 1. */
 @keyframes quickmark-modal-enter {
   from {
     opacity: 0;
@@ -276,4 +278,10 @@ body {
 
 .quickmark-modal-enter {
   animation: quickmark-modal-enter 240ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quickmark-modal-enter {
+    animation: none;
+  }
 }

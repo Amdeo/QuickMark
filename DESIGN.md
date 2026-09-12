@@ -383,7 +383,15 @@ The overlay opens with a two-part entrance with a light spring feel:
 - **Backdrop**: fades in from transparent over 200ms (`ease-out`), applied via the Web Animations API in the content script.
 - **Panel**: rises 16px and scales from 0.96 to 1 while fading in over 240ms with a slight overshoot (`cubic-bezier(0.34, 1.56, 0.64, 1)`), applied via the `.quickmark-modal-enter` CSS animation.
 
-The three-layer shadow itself is **static** — it does not animate. Both entrance animations are skipped under `prefers-reduced-motion` (the global CSS rule collapses the panel animation to instant, and the content script checks the media query before animating the backdrop). Close is instant with no exit animation.
+The three-layer shadow itself is **static** — it does not animate. Under `prefers-reduced-motion` both parts are dropped rather than shortened: `.quickmark-modal-enter` sets `animation: none`, and the content script checks the media query before animating the backdrop. The tabs panel (`.qt-fade` / `.qt-rise`) uses the same 200ms fade plus 240ms overshoot rise and drops both the same way, so the two panels open identically. Close is instant with no exit animation.
+
+### Boot Skeleton Handoff
+
+The overlay module (React + Fuse + pinyin) loads on demand, so the boot script can show a placeholder panel before it arrives.
+
+- **Delayed appearance**: the skeleton is scheduled 120ms after the shortcut. When the module is already parsed (every open after the first) it never renders, so the panel's own entrance is the only thing the user sees.
+- **Same entrance**: when it does appear, the skeleton fades its host in over 200ms and rises its panel 240ms with the same overshoot curve, so the first paint matches the other panels instead of popping in.
+- **Cross-fade handoff**: the overlay commits synchronously (`flushSync`) before the boot script drops the skeleton, and the skeleton fades out over 150ms — the panel is always in the DOM first, so no frame renders an empty backdrop, and the placeholder block never disappears as one hard cut.
 
 ### Overlay Backdrop
 

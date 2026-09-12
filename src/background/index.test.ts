@@ -19,7 +19,7 @@ vi.mock("../adapters/chromeBookmarks", () => ({
 
 function createChromeMock() {
   const listeners = {
-    commands: new Set<(command: string) => void>(),
+    commands: new Set<(command: string, tab?: chrome.tabs.Tab) => void>(),
     runtime: new Set<(message: unknown, sender: unknown, sendResponse: (response?: unknown) => void) => unknown>(),
     bookmarks: {
       onCreated: new Set<() => void>(),
@@ -263,6 +263,21 @@ test("open-search command toggles search overlay", async () => {
 
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(chromeMock.api.tabs.sendMessage).toHaveBeenCalledWith(1, { type: "QUICKMARK_TOGGLE" });
+});
+
+test("open-search command targets the command's tab even when currentWindow is stale", async () => {
+  // Tab panel 跨窗口切换后焦点事件未及处理时，query({active, currentWindow}) 会返回空，
+  // 旧实现静默失效；命令回调自带的 tab 不受影响。
+  const chromeMock = createChromeMock();
+  chromeMock.api.tabs.query.mockResolvedValue([]);
+  await importBackground(chromeMock);
+
+  const [commandListener] = [...chromeMock.listeners.commands];
+  commandListener("open-search", { id: 202, windowId: 20, url: "https://b.test/" } as chrome.tabs.Tab);
+
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(chromeMock.api.tabs.query).not.toHaveBeenCalled();
+  expect(chromeMock.api.tabs.sendMessage).toHaveBeenCalledWith(202, { type: "QUICKMARK_TOGGLE" });
 });
 
 test("bookmark and history events mark cache stale", async () => {
