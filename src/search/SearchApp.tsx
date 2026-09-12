@@ -111,7 +111,9 @@ export function SearchApp({
 
   // Address-bar semantics: a complete URL or bare domain navigates directly.
   const directUrl = useMemo(() => resolveDirectUrl(query), [query]);
-  const modifierLabel = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  const modifierLabel = isMac ? "⌘" : "Ctrl";
+  const optionLabel = isMac ? "Option" : "Alt";
   const pinnedUrls = useMemo(() => new Set(pinnedSites.map((site) => site.url)), [pinnedSites]);
   const pinnedItems = useMemo(() => pinnedSites.map((site): BookmarkItem =>
     bookmarks.find((item) => item.url === site.url) ?? {
@@ -123,9 +125,6 @@ export function SearchApp({
       visitCount: 0,
     }
   ), [bookmarks, pinnedSites]);
-  // 固定区可见时先占数字键，结果行接着编号，保证角标与实际按键一致。
-  const shortcutOffset = query.trim() ? 0 : pinnedItems.length;
-
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -399,11 +398,17 @@ export function SearchApp({
           event.preventDefault();
           void openSelected(event.metaKey || event.ctrlKey);
         }
-        if (/^[1-9]$/.test(event.key) && (event.metaKey || event.ctrlKey)) {
-          event.preventDefault();
-          const slot = parseInt(event.key, 10) - 1;
-          const target = slot < shortcutOffset ? pinnedItems[slot] : visibleResults[slot - shortcutOffset];
+        if (/^[1-9]$/.test(event.key) && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+          const target = pinnedItems[parseInt(event.key, 10) - 1];
           if (target) {
+            event.preventDefault();
+            void openItem(target, false);
+          }
+        }
+        if (/^[1-9]$/.test(event.key) && event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+          const target = visibleResults[parseInt(event.key, 10) - 1];
+          if (target) {
+            event.preventDefault();
             void openItem(target, false);
           }
         }
@@ -495,7 +500,6 @@ export function SearchApp({
           {!query.trim() && preferencesLoaded ? (
             <PinnedSites
               items={pinnedItems}
-              modifierLabel={modifierLabel}
               onOpen={(index, newTab) => void openItem(pinnedItems[index], newTab)}
               onUnpin={togglePinnedSite}
               onReorder={movePinnedSite}
@@ -541,7 +545,7 @@ export function SearchApp({
                 item={item}
                 folderPath={folderPaths.get(item.id) ?? []}
                 query={query}
-                shortcutKey={index + 1 + shortcutOffset <= 9 ? index + 1 + shortcutOffset : undefined}
+                shortcutKey={index + 1 <= 9 ? index + 1 : undefined}
                 isSelected={index === selectedIndex}
                 isCopied={copyState?.id === item.id && copyState.ok}
                 copyFailed={copyState?.id === item.id && !copyState.ok}
@@ -594,6 +598,7 @@ export function SearchApp({
           effectiveTheme={effectiveTheme}
           onCycleTheme={cycleTheme}
           modifierLabel={modifierLabel}
+          optionLabel={optionLabel}
           onClose={onClose}
         />
       </section>

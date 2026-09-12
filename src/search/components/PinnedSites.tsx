@@ -3,10 +3,9 @@ import { Icon } from "../../components/Icon";
 import type { BookmarkItem } from "../../domain/types";
 import { BookmarkFavicon } from "./BookmarkRow";
 
-/** 固定在筛选栏里的一行图标：编号对应 Cmd/Ctrl 数字键，名称与网址放在 title / aria-label 里。 */
-export function PinnedSites({ items, modifierLabel, onOpen, onUnpin, onReorder }: {
+/** 固定在筛选栏里的一行图标：编号对应 Ctrl 数字键，名称与网址放在 title / aria-label 里。 */
+export function PinnedSites({ items, onOpen, onUnpin, onReorder }: {
   items: BookmarkItem[];
-  modifierLabel: string;
   onOpen: (index: number, newTab: boolean) => void;
   onUnpin: (item: BookmarkItem) => void;
   onReorder: (from: number, to: number) => void;
@@ -58,7 +57,7 @@ export function PinnedSites({ items, modifierLabel, onOpen, onUnpin, onReorder }
           <button
             type="button"
             aria-label={`打开固定网站：${item.title}`}
-            title={`${item.title}\n${item.url}\n${modifierLabel}+${index + 1} 打开 · 拖拽可排序`}
+            title={`${item.title}\n${item.url}\nCtrl+${index + 1} 打开 · 拖拽可排序`}
             onClick={(event) => onOpen(index, event.metaKey || event.ctrlKey)}
             className="flex h-7 w-7 cursor-grab items-center justify-center rounded-lg bg-surface-container/70 ring-1 ring-outline-variant/30 transition-colors hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing"
           >

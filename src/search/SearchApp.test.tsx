@@ -204,24 +204,48 @@ test("pinned icons show their shortcut numbers and reorder by drag", async () =>
   expect(openBookmark).toHaveBeenCalledWith(results[2], false);
 });
 
-test("Cmd/Ctrl+digit opens pinned icons first and renumbers result badges", async () => {
+test("Ctrl+digit opens pinned sites while Alt+digit opens result rows", async () => {
   await mount();
   await click(button("固定网站：Page second"));
   await key(input(), "1", { ctrlKey: true });
   expect(openBookmark).toHaveBeenCalledWith(results[1], false);
   openBookmark.mockClear();
-  await key(input(), "2", { ctrlKey: true });
+  await key(input(), "1", { altKey: true });
   expect(openBookmark).toHaveBeenCalledWith(results[0], false);
+  // 固定区与结果区修饰键分离，结果行角标恒为 1..9，不做偏移。
   const rows = Array.from(shadow.querySelectorAll('[role="option"]'));
-  expect(rows[0].querySelector("span[aria-hidden]")?.textContent).toBe("2");
+  expect(rows[0].querySelector("span[aria-hidden]")?.textContent).toBe("1");
+  expect(rows[1].querySelector("span[aria-hidden]")?.textContent).toBe("2");
 });
 
-test("typing a query hides the pin strip and returns the digit keys to results", async () => {
+test("typing a query hides the pin strip; Alt+digit opens results and Ctrl+digit still opens pins", async () => {
   await mount();
   await click(button("固定网站：Page second"));
   await typeQuery("page");
   expect(shadow.querySelector('section[aria-label="固定网站"]')).toBeNull();
+  await key(input(), "1", { altKey: true });
+  expect(openBookmark).toHaveBeenCalledWith(results[0], false);
+  openBookmark.mockClear();
   await key(input(), "1", { ctrlKey: true });
+  expect(openBookmark).toHaveBeenCalledWith(results[1], false);
+});
+
+test("digit shortcuts out of range or with a dead modifier do nothing", async () => {
+  await mount();
+  await click(button("固定网站：Page first"));
+  await key(input(), "2", { ctrlKey: true });
+  expect(openBookmark).not.toHaveBeenCalled();
+  await key(input(), "9", { altKey: true });
+  expect(openBookmark).not.toHaveBeenCalled();
+  await key(input(), "1", { metaKey: true });
+  expect(openBookmark).not.toHaveBeenCalled();
+});
+
+test("Alt+P still pins the selected row beside the Alt+digit mapping", async () => {
+  await mount();
+  await key(input(), "p", { altKey: true });
+  expect(shadow.querySelector('section[aria-label="固定网站"]')).not.toBeNull();
+  await key(input(), "1", { altKey: true });
   expect(openBookmark).toHaveBeenCalledWith(results[0], false);
 });
 

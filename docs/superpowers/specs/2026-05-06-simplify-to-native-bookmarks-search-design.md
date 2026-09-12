@@ -113,7 +113,7 @@ Reuse existing `domain/search.ts` with minimal changes:
 - `↑↓` — Navigate results
 - `Enter` — Open selected bookmark (same tab)
 - `Ctrl/Cmd + Enter` — Open in new tab
-- `1-9` — Direct open top 9 results
+- `Option/Alt + 1-9` — Direct open top 9 results
 - `Esc` — Close overlay
 
 **Changes from current SearchApp:**

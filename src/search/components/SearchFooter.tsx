@@ -10,6 +10,7 @@ interface SearchFooterProps {
   themePref: ThemePreference;
   effectiveTheme: "light" | "dark";
   modifierLabel: string;
+  optionLabel: string;
   onCycleTheme: () => void;
   onClose?: () => void;
 }
@@ -22,6 +23,7 @@ export function SearchFooter({
   themePref,
   effectiveTheme,
   modifierLabel,
+  optionLabel,
   onCycleTheme,
   onClose,
 }: SearchFooterProps) {
@@ -53,7 +55,14 @@ export function SearchFooter({
         </span>
         <span className="hidden items-center gap-1.5 sm:flex">
           <span className="flex items-center gap-0.5">
-            <Kbd>{modifierLabel}</Kbd>
+            <Kbd>Ctrl</Kbd>
+            <Kbd>1–9</Kbd>
+          </span>
+          <span>固定</span>
+        </span>
+        <span className="hidden items-center gap-1.5 sm:flex">
+          <span className="flex items-center gap-0.5">
+            <Kbd>{optionLabel}</Kbd>
             <Kbd>1–9</Kbd>
           </span>
           <span>直达</span>
