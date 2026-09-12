@@ -75,7 +75,7 @@ styles.rel = "stylesheet";
 styles.href = "./styles.css";
 const app = document.createElement("div");
 shadow.append(styles, app);
-createRoot(app).render(<SearchApp mode="modal" openBookmark={async (item, newTab) => {
+createRoot(app).render(<SearchApp mode="modal" onClose={() => {}} openBookmark={async (item, newTab) => {
   // 记录实际导航目标，不离开验证页。
   host.dataset.openedUrl = item.url;
   host.dataset.openedNewTab = String(newTab);

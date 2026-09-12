@@ -62,7 +62,7 @@ export function BookmarkRow({
   item: BookmarkItem;
   folderPath: string[];
   query: string;
-  /** 该行对应的 Option/Alt 数字键；未分配键时不显示角标。 */
+  /** 该行对应的 Shift+Ctrl 数字键；未分配键时不显示角标。 */
   shortcutKey?: number;
   isSelected: boolean;
   isCopied: boolean;

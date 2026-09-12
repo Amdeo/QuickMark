@@ -204,13 +204,13 @@ test("pinned icons show their shortcut numbers and reorder by drag", async () =>
   expect(openBookmark).toHaveBeenCalledWith(results[2], false);
 });
 
-test("Ctrl+digit opens pinned sites while Alt+digit opens result rows", async () => {
+test("Ctrl+digit opens pinned sites while Shift+Ctrl+digit opens result rows", async () => {
   await mount();
   await click(button("固定网站：Page second"));
   await key(input(), "1", { ctrlKey: true });
   expect(openBookmark).toHaveBeenCalledWith(results[1], false);
   openBookmark.mockClear();
-  await key(input(), "1", { altKey: true });
+  await key(input(), "1", { ctrlKey: true, shiftKey: true });
   expect(openBookmark).toHaveBeenCalledWith(results[0], false);
   // 固定区与结果区修饰键分离，结果行角标恒为 1..9，不做偏移。
   const rows = Array.from(shadow.querySelectorAll('[role="option"]'));
@@ -218,12 +218,12 @@ test("Ctrl+digit opens pinned sites while Alt+digit opens result rows", async ()
   expect(rows[1].querySelector("span[aria-hidden]")?.textContent).toBe("2");
 });
 
-test("typing a query hides the pin strip; Alt+digit opens results and Ctrl+digit still opens pins", async () => {
+test("typing a query hides the pin strip; Shift+Ctrl+digit opens results and Ctrl+digit still opens pins", async () => {
   await mount();
   await click(button("固定网站：Page second"));
   await typeQuery("page");
   expect(shadow.querySelector('section[aria-label="固定网站"]')).toBeNull();
-  await key(input(), "1", { altKey: true });
+  await key(input(), "1", { ctrlKey: true, shiftKey: true });
   expect(openBookmark).toHaveBeenCalledWith(results[0], false);
   openBookmark.mockClear();
   await key(input(), "1", { ctrlKey: true });
@@ -235,17 +235,17 @@ test("digit shortcuts out of range or with a dead modifier do nothing", async ()
   await click(button("固定网站：Page first"));
   await key(input(), "2", { ctrlKey: true });
   expect(openBookmark).not.toHaveBeenCalled();
-  await key(input(), "9", { altKey: true });
+  await key(input(), "9", { ctrlKey: true, shiftKey: true });
   expect(openBookmark).not.toHaveBeenCalled();
   await key(input(), "1", { metaKey: true });
   expect(openBookmark).not.toHaveBeenCalled();
 });
 
-test("Alt+P still pins the selected row beside the Alt+digit mapping", async () => {
+test("Alt+P still pins the selected row beside the Shift+Ctrl+digit mapping", async () => {
   await mount();
   await key(input(), "p", { altKey: true });
   expect(shadow.querySelector('section[aria-label="固定网站"]')).not.toBeNull();
-  await key(input(), "1", { altKey: true });
+  await key(input(), "1", { ctrlKey: true, shiftKey: true });
   expect(openBookmark).toHaveBeenCalledWith(results[0], false);
 });
 
@@ -266,6 +266,24 @@ test("editing keys and Enter on a focused button are not hijacked by result navi
   pinButton.focus();
   expect((await key(pinButton, "Enter")).defaultPrevented).toBe(false);
   expect(openBookmark).not.toHaveBeenCalled();
+});
+
+test("an empty box cycles the source filters with the arrow keys, a typed query keeps the cursor", async () => {
+  await mount();
+  const activeChip = () => shadow.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')!.textContent;
+  expect(activeChip()).toBe("全部");
+  expect((await key(input(), "ArrowRight")).defaultPrevented).toBe(true);
+  expect(activeChip()).toBe("书签");
+  await key(input(), "ArrowRight");
+  expect(activeChip()).toBe("历史");
+  await key(input(), "ArrowRight");
+  expect(activeChip()).toBe("全部");
+  await key(input(), "ArrowLeft");
+  expect(activeChip()).toBe("历史");
+
+  await typeQuery("abc");
+  expect((await key(input(), "ArrowLeft")).defaultPrevented).toBe(false);
+  expect(activeChip()).toBe("历史");
 });
 
 test("merged filter menu narrows the time range, sorts, and closes on outside click", async () => {

@@ -10,7 +10,7 @@ interface SearchFooterProps {
   themePref: ThemePreference;
   effectiveTheme: "light" | "dark";
   modifierLabel: string;
-  optionLabel: string;
+  jumpLabel: string;
   onCycleTheme: () => void;
   onClose?: () => void;
 }
@@ -23,13 +23,13 @@ export function SearchFooter({
   themePref,
   effectiveTheme,
   modifierLabel,
-  optionLabel,
+  jumpLabel,
   onCycleTheme,
   onClose,
 }: SearchFooterProps) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-outline-variant/40 bg-surface-container-low/60 px-3 py-2 text-[11px] text-outline">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <div className="flex shrink-0 flex-nowrap items-center justify-between gap-x-4 border-t border-outline-variant/40 bg-surface-container-low/60 px-3 py-2 text-[11px] text-outline">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
         <span className="flex items-center gap-1.5">
           <Kbd>↑↓</Kbd>
           <span>导航</span>
@@ -62,7 +62,7 @@ export function SearchFooter({
         </span>
         <span className="hidden items-center gap-1.5 sm:flex">
           <span className="flex items-center gap-0.5">
-            <Kbd>{optionLabel}</Kbd>
+            <Kbd>{jumpLabel}</Kbd>
             <Kbd>1–9</Kbd>
           </span>
           <span>直达</span>
@@ -76,16 +76,8 @@ export function SearchFooter({
             <span>复制链接</span>
           </span>
         ) : null}
-        <span className="hidden items-center gap-1.5 sm:flex">
-          <Kbd>Alt P</Kbd>
-          <span>固定</span>
-        </span>
-        <span className="hidden items-center gap-1.5 lg:flex">
-          <Kbd>Alt ←→</Kbd>
-          <span>筛选</span>
-        </span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
           title={`主题: ${themePref === "system" ? "跟随系统" : themePref === "light" ? "浅色" : "深色"}`}

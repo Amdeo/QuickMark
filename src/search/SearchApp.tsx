@@ -113,7 +113,7 @@ export function SearchApp({
   const directUrl = useMemo(() => resolveDirectUrl(query), [query]);
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   const modifierLabel = isMac ? "⌘" : "Ctrl";
-  const optionLabel = isMac ? "Option" : "Alt";
+  const jumpLabel = isMac ? "⇧⌃" : "Shift+Ctrl";
   const pinnedUrls = useMemo(() => new Set(pinnedSites.map((site) => site.url)), [pinnedSites]);
   const pinnedItems = useMemo(() => pinnedSites.map((site): BookmarkItem =>
     bookmarks.find((item) => item.url === site.url) ?? {
@@ -350,12 +350,6 @@ useLayoutEffect(() => {
             }
             return;
           }
-          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-            event.preventDefault();
-            const filters: SourceFilter[] = ["all", "bookmark", "history"];
-            setSourceFilter(filters[(filters.indexOf(sourceFilter) + (event.key === "ArrowLeft" ? 2 : 1)) % 3]);
-            return;
-          }
         }
         // Buttons keep native Enter/Space behavior; editing keys belong to the input.
         if (event.target !== inputRef.current || menuOpen) return;
@@ -363,6 +357,13 @@ useLayoutEffect(() => {
         if (event.key === " " && !query) {
           event.preventDefault();
           openRecentSearches();
+          return;
+        }
+        // 有输入时左右键属于光标移动，唯有搜索框为空时用来切换来源筛选。
+        if (!query && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+          event.preventDefault();
+          const filters: SourceFilter[] = ["all", "bookmark", "history"];
+          setSourceFilter(filters[(filters.indexOf(sourceFilter) + (event.key === "ArrowLeft" ? 2 : 1)) % 3]);
           return;
         }
         if (recentsOpen && searchHistory.length > 0) {
@@ -405,7 +406,7 @@ useLayoutEffect(() => {
             void openItem(target, false);
           }
         }
-        if (/^[1-9]$/.test(event.key) && event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+        if (/^[1-9]$/.test(event.key) && event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey) {
           const target = visibleResults[parseInt(event.key, 10) - 1];
           if (target) {
             event.preventDefault();
@@ -598,7 +599,7 @@ useLayoutEffect(() => {
           effectiveTheme={effectiveTheme}
           onCycleTheme={cycleTheme}
           modifierLabel={modifierLabel}
-          optionLabel={optionLabel}
+          jumpLabel={jumpLabel}
           onClose={onClose}
         />
       </section>

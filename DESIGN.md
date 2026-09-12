@@ -422,11 +422,11 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 - Search results are independent rows in ranked order. Never collapse by domain, promote a site's root URL, or synthesize homepage results.
 - An empty query adds the pinned strip to the filter bar itself, right of the source chips and left of the filter dropdown, outside the scroll area: at most eight exact URLs as a strip of 28px favicon buttons (15px icons, 6px gaps) prefixed by a pin glyph that names the strip. The filter row wraps, so a narrow panel moves the whole strip to its own line instead of clipping it. Each icon carries the same corner number badge as result rows, showing its real `Ctrl+N` key. Drag an icon onto another to reorder — the strip is the manual order, so the drop target's new position is persisted, and numbers plus digit keys follow the new order.
 - One dropdown in the filter bar owns both the time range and the sort mode, split into labelled groups inside a single menu; source filtering stays as chips beside it. Its label summarizes the active non-default choices (e.g. `今天 · 使用频率`) and reads `筛选` when both are at their defaults, so removing the time chips never hides the current filter state.
-- Pin/unpin from a result with its pin button or `Alt+P`. `Ctrl+1–N` opens the pinned sites (one key per pin, out of range does nothing); result rows are opened with `Option/Alt+1–9` and their badges are the constant row number 1..9, so the two zones never collide and no offset is needed — `Ctrl` is never the opening modifier on macOS, where browsers reserve Cmd+digit for tab switching. With a query typed the strip is hidden but `Ctrl+digit` still opens that pinned site; `Option/Alt+digit` always opens the result row. Unpin is a small remove button revealed on hover or keyboard focus; with nothing pinned the bar renders no placeholder.
+- Pin/unpin from a result with its pin button or `Alt+P`. `Ctrl+1–N` opens the pinned sites (one key per pin, out of range does nothing); result rows are opened with `Shift+Ctrl+1–9` and their badges are the constant row number 1..9, so the two zones never collide and no offset is needed — `Ctrl` is never the opening modifier on macOS, where browsers reserve Cmd+digit for tab switching. With a query typed the strip is hidden but `Ctrl+digit` still opens that pinned site; `Shift+Ctrl+digit` always opens the result row. Unpin is a small remove button revealed on hover or keyboard focus; with nothing pinned the bar renders no placeholder.
 - Smart ranking uses actual visits, with recency (up to 100 points, 3-day exponential decay) plus bounded log-scaled frequency (up to 40 points, 14-day exponential decay). Missing visit timestamps receive no recency or frequency boost. New bookmark creation is not evidence of a visit.
 - Without a query, recent orders by actual visit time; frequent orders by visit count. With a query, textual relevance remains primary, the selected mode breaks close ties, and relevance mode preserves Fuse order.
 - Persist sorting and pins independently in `chrome.storage.local`. Keep the manual pin order across openings and synchronize external storage changes. Failed initial reads must not allow empty state to overwrite saved pins; display save/load failures inline.
-- Plain left/right arrows and selected-text copy retain normal input behavior. Use `Alt+Left/Right` for source filtering. Focused buttons retain native Enter/Space activation.
+- Left/right arrows cycle the source chips (`全部` → `书签` → `历史`) while the box is empty; with a query typed they keep their normal cursor movement, the same empty-box rule as the Space trigger. Selected-text copy always keeps its input behavior. Focused buttons retain native Enter/Space activation. `Alt+P` pins the selected row; the browser owns `Alt+Left/Right` (back/forward), so filtering never binds a modifier there.
 
 ### Recent Searches
 
@@ -459,7 +459,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 - **Hover**: `bg-surface-2` (`{colors.surface-2}`).
 - **Selected**: `bg-primary-fixed/40` + `ring-1 ring-inset ring-primary/15` (`{colors.primary-fixed}` at 40% opacity, `{colors.primary}` ring at 15% opacity).
 - **Favicon container**: 36px square, `{rounded.md}`, `{colors.surface-3}` background, `1px {colors.hairline}` ring. Contains a 16–18px favicon image or a fallback globe icon.
-- **Number badge**: 16px, `{rounded.md}`, appears top-left of favicon. Always visible — it is the affordance for the `Option/Alt+1–9` direct jump, so hiding it would break discoverability. Selected: `{colors.primary}` bg, `{colors.on-primary}` text. Idle: muted surface bg (`surface-container-high`), `{colors.ink-subtle}` text.
+- **Number badge**: 16px, `{rounded.md}`, appears top-left of favicon. Always visible — it is the affordance for the `Shift+Ctrl+1–9` direct jump, so hiding it would break discoverability. Selected: `{colors.primary}` bg, `{colors.on-primary}` text. Idle: muted surface bg (`surface-container-high`), `{colors.ink-subtle}` text.
 - **Title**: `{typography.body}` at 14px, weight 600, truncated. Query matches highlighted with `{colors.tertiary-fixed}` background.
 - **Folder chip**: Inline badge after title. `{colors.surface-3}` background, `{colors.ink-subtle}` text, 10.5px. Hidden below `sm` breakpoint.
 - **History badge**: Inline "历史" badge. `{colors.tertiary-fixed}` background, `{colors.tertiary}` text, 10px.
@@ -481,7 +481,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 
 - Border-top: `1px {colors.hairline}`. Background: `{colors.surface-2}` at 60% opacity.
 - Padding: `8px 12px`. Font: 11px, `{colors.ink-subtle}`.
-- Left side: shortcut groups — ↑↓ 导航, Space 最近搜索 (empty query with saved history), ↵ 打开/搜索, ⌘↵ 新标签, Ctrl 1–9 固定, Option/Alt 1–9 直达, ⌘C 复制链接 (only when a result is selected).
+- Left side: shortcut groups — ↑↓ 导航, Space 最近搜索 (empty query with saved history), ↵ 打开/搜索, ⌘↵ 新标签, Ctrl 1–9 固定, Shift+Ctrl 1–9 直达, ⌘C 复制链接 (only when a result is selected).
 - Right side: theme toggle button (cycles light/dark/system) and Esc hint ("清空" or "关闭" depending on query state).
 - Some shortcut groups hide below `sm` breakpoint to avoid overflow.
 
@@ -528,7 +528,7 @@ QuickMark avoids sharp corners entirely. Even the smallest interactive element (
 
 - Use `{rounded.2xl}` (24px) for the modal outer frame and `{rounded.lg}` (12px) for result rows.
 - Keep result rows as floating cards with `mx-2` — never edge-to-edge flat list items.
-- Keep the number badge always visible — it is the affordance for `Option/Alt+1–9`; only its color changes on selection.
+- Keep the number badge always visible — it is the affordance for `Shift+Ctrl+1–9`; only its color changes on selection.
 - Use `group-hover` for right-action-area buttons (copy, visit count, ↵ 打开) — keep rows clean at rest.
 - Respect `prefers-reduced-motion` — the global CSS already nullifies animations/transitions.
 - Use the three-layer modal shadow exactly as specified — do not simplify to a single shadow.
@@ -557,7 +557,7 @@ QuickMark is a fixed-width command palette, not a fluid layout. Responsive rules
 
 | Breakpoint | Key Changes |
 | --- | --- |
-| `sm` (640px) | Footer shortcut groups start appearing (⌘↵, Ctrl 1–9, Option/Alt 1–9, ⌘C). Folder chips visible on rows. |
+| `sm` (640px) | Footer shortcut groups start appearing (⌘↵, Ctrl 1–9, Shift+Ctrl 1–9, ⌘C). Folder chips visible on rows. |
 | `< sm` | Footer shows only ↑↓ and ↵. Folder chips hidden. Action chips may hide. |
 
 ### Container Behavior
