@@ -115,6 +115,13 @@ export function SearchApp({
   const modifierLabel = isMac ? "⌘" : "Ctrl";
   const jumpLabel = isMac ? "⇧⌃" : "Shift+Ctrl";
   const pinnedUrls = useMemo(() => new Set(pinnedSites.map((site) => site.url)), [pinnedSites]);
+  const showsPinnedStrip = !query.trim() && preferencesLoaded && pinnedSites.length > 0;
+  // 固定区已经用图标条列出了这些网址，结果列表不再重复一行；
+  // 带查询时图标条隐藏，固定项留在结果里保证仍能搜到（Ctrl+数字键始终可直达）。
+  const listResults = useMemo(
+    () => (showsPinnedStrip ? results.filter((item) => !pinnedUrls.has(item.url)) : results),
+    [results, showsPinnedStrip, pinnedUrls]
+  );
   const pinnedItems = useMemo(() => pinnedSites.map((site): BookmarkItem =>
     bookmarks.find((item) => item.url === site.url) ?? {
       id: `pinned:${site.url}`,
@@ -160,35 +167,35 @@ useLayoutEffect(() => {
 
   useEffect(() => {
     setVisibleResultCount((count) =>
-      Math.min(Math.max(count, RESULT_PAGE_SIZE), results.length || RESULT_PAGE_SIZE)
+      Math.min(Math.max(count, RESULT_PAGE_SIZE), listResults.length || RESULT_PAGE_SIZE)
     );
-  }, [results.length]);
+  }, [listResults.length]);
 
   useEffect(() => {
     if (selectedIndex >= visibleResultCount - 1) {
       setVisibleResultCount((count) =>
         Math.max(
           count,
-          getNextVisibleResultCount(selectedIndex, results.length, RESULT_PAGE_SIZE)
+          getNextVisibleResultCount(selectedIndex, listResults.length, RESULT_PAGE_SIZE)
         )
       );
     }
-  }, [results.length, selectedIndex, visibleResultCount]);
+  }, [listResults.length, selectedIndex, visibleResultCount]);
 
   const { bookmarkCount, historyCount } = useMemo(() => {
     let b = 0;
     let h = 0;
-    for (const r of results) {
+    for (const r of listResults) {
       if (r.source === "history") h++;
       else b++;
     }
     return { bookmarkCount: b, historyCount: h };
-  }, [results]);
+  }, [listResults]);
 
   const statusText = useMemo(() => {
     if (isLoading) return "加载中";
     if (error) return "加载失败";
-    if (!results.length) {
+    if (!listResults.length) {
       if (query) return "无结果";
       if (timeFilter !== "all") return "该时间范围无记录";
       if (sourceFilter === "bookmark") return "无书签";
@@ -196,16 +203,16 @@ useLayoutEffect(() => {
       return "无书签";
     }
     const parts: string[] = [];
-    if (sourceFilter === "bookmark") return `书签 ${results.length}`;
-    if (sourceFilter === "history") return `历史 ${results.length}`;
+    if (sourceFilter === "bookmark") return `书签 ${listResults.length}`;
+    if (sourceFilter === "history") return `历史 ${listResults.length}`;
     if (bookmarkCount > 0) parts.push(`书签 ${bookmarkCount}`);
     if (historyCount > 0) parts.push(`历史 ${historyCount}`);
     return parts.join(" · ");
-  }, [isLoading, error, query, results.length, bookmarkCount, historyCount, sourceFilter, timeFilter]);
+  }, [isLoading, error, query, listResults, bookmarkCount, historyCount, sourceFilter, timeFilter]);
 
   const visibleResults = useMemo(
-    () => results.slice(0, visibleResultCount),
-    [results, visibleResultCount]
+    () => listResults.slice(0, visibleResultCount),
+    [listResults, visibleResultCount]
   );
 
 
@@ -359,8 +366,11 @@ useLayoutEffect(() => {
           openRecentSearches();
           return;
         }
-        // 有输入时左右键属于光标移动，唯有搜索框为空时用来切换来源筛选。
-        if (!query && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+        // 有输入时左右键属于光标移动，带上修饰键（Cmd/Option）时同样保留系统行为；
+        // 唯有搜索框为空且是裸左右键时用来切换来源筛选。
+        const plainArrow =
+          !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+        if (!query && plainArrow && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
           event.preventDefault();
           const filters: SourceFilter[] = ["all", "bookmark", "history"];
           setSourceFilter(filters[(filters.indexOf(sourceFilter) + (event.key === "ArrowLeft" ? 2 : 1)) % 3]);
@@ -498,7 +508,7 @@ useLayoutEffect(() => {
           setMenuOpen={setMenuOpen}
           query={query}
         >
-          {!query.trim() && preferencesLoaded ? (
+          {showsPinnedStrip ? (
             <PinnedSites
               items={pinnedItems}
               onOpen={(index, newTab) => void openItem(pinnedItems[index], newTab)}
@@ -521,12 +531,12 @@ useLayoutEffect(() => {
           onScroll={(event) => {
             if (isNearScrollBottom(event.currentTarget)) {
               setVisibleResultCount((count) =>
-                getNextVisibleResultCount(count, results.length, RESULT_PAGE_SIZE)
+                getNextVisibleResultCount(count, listResults.length, RESULT_PAGE_SIZE)
               );
             }
           }}
         >
-          {results.length > 0 ? (
+          {listResults.length > 0 ? (
             <div className="px-4 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-wider text-outline/80">
               {statusText}{!query.trim() && sortMode === "smart" ? " · 最近常用优先" : ""}
             </div>
@@ -576,7 +586,7 @@ useLayoutEffect(() => {
             </div>
           ) : null}
 
-          {!isLoading && !error && !results.length ? (
+          {!isLoading && !error && !listResults.length && !results.length ? (
             <EmptyState
               query={query}
               directUrl={directUrl}

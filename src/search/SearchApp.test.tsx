@@ -245,8 +245,25 @@ test("Alt+P still pins the selected row beside the Shift+Ctrl+digit mapping", as
   await mount();
   await key(input(), "p", { altKey: true });
   expect(shadow.querySelector('section[aria-label="固定网站"]')).not.toBeNull();
+  // 固定后该行移出结果列表，结果区首行顺延为 Page second。
+  expect(shadow.querySelector("#quickmark-result-first")).toBeNull();
   await key(input(), "1", { ctrlKey: true, shiftKey: true });
-  expect(openBookmark).toHaveBeenCalledWith(results[0], false);
+  expect(openBookmark).toHaveBeenCalledWith(results[1], false);
+});
+
+test("a pinned site leaves the result list for its icon strip and comes back with a query", async () => {
+  await mount();
+  await click(button("固定网站：Page second"));
+  const rowIds = () => Array.from(shadow.querySelectorAll('[role="option"]')).map((row) => row.id);
+  expect(rowIds()).toEqual(["quickmark-result-first", "quickmark-result-third"]);
+  await key(input(), "2", { ctrlKey: true, shiftKey: true });
+  expect(openBookmark).toHaveBeenCalledWith(results[2], false);
+  openBookmark.mockClear();
+
+  // 图标条隐藏时固定项回到结果里，搜索仍然能找到它。
+  await typeQuery("second");
+  expect(shadow.querySelector('section[aria-label="固定网站"]')).toBeNull();
+  expect(rowIds()).toContain("quickmark-result-second");
 });
 
 test("a saved pin remains usable even after its bookmark or history record disappears", async () => {
@@ -279,6 +296,11 @@ test("an empty box cycles the source filters with the arrow keys, a typed query 
   await key(input(), "ArrowRight");
   expect(activeChip()).toBe("全部");
   await key(input(), "ArrowLeft");
+  expect(activeChip()).toBe("历史");
+
+  // 带修饰键的左右键交给系统（行首/词首跳转、选中），不抢来做筛选切换。
+  await key(input(), "ArrowRight", { metaKey: true });
+  await key(input(), "ArrowLeft", { altKey: true });
   expect(activeChip()).toBe("历史");
 
   await typeQuery("abc");

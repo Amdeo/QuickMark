@@ -61,7 +61,8 @@ export function PinnedSites({ items, onOpen, onUnpin, onReorder }: {
             onClick={(event) => onOpen(index, event.metaKey || event.ctrlKey)}
             className="flex h-7 w-7 cursor-grab items-center justify-center rounded-lg bg-surface-container/70 ring-1 ring-outline-variant/30 transition-colors hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing"
           >
-            <BookmarkFavicon url={item.url} favicon={item.favicon} size={15} />
+            {/* 按钮 h-7（28px）固定条高：图标放大到 24px 留有 2px 内边距，仍不会撑高这一行。 */}
+            <BookmarkFavicon url={item.url} favicon={item.favicon} size={24} />
           </button>
           <span
             aria-hidden

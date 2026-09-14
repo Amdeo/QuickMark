@@ -86,10 +86,10 @@ export function BookmarkRow({
       onClick={(event) => onOpen(event.metaKey || event.ctrlKey)}
       className={[
         "group relative flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors duration-150",
-        "mx-2 rounded-xl",
+        "mx-2 rounded-xl ring-1 ring-inset",
         isSelected
-          ? "bg-primary-fixed/40 ring-1 ring-inset ring-primary/15"
-          : "hover:bg-surface-container-low/70",
+          ? "bg-primary-fixed/40 ring-primary/40"
+          : "ring-outline-variant/70 hover:bg-surface-container-low/70",
       ].join(" ")}
     >
       {/* Favicon + Number Badge */}
@@ -225,7 +225,7 @@ export function BookmarkRow({
 
 export function LoadingRow() {
   return (
-    <div className="mx-2 flex items-center gap-3 rounded-xl px-3 py-2.5">
+    <div className="mx-2 flex items-center gap-3 rounded-xl px-3 py-2.5 ring-1 ring-inset ring-outline-variant/70">
       <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-surface-container" />
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 h-3.5 w-2/5 animate-pulse rounded-md bg-surface-container" />
